@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar publicação' if editing else 'Enviar grupo/canal' }}{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<div class="auth-wrap wide">
+<h1>{{ 'Editar publicação' if editing else 'Enviar grupo ou canal' }}</h1>
+<form method="post" enctype="multipart/form-data" class="form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>Nome {{ 'do grupo' if not editing else '' }}
+    <input name="name" value="{{ d.name if d else '' }}" required maxlength="100"></label>
+  <label>Link ou convite do Telegram
+    <input name="link" value="{{ d.link if d else '' }}" required placeholder="Link público ou convite privado (https://t.me/...)" pattern="https?://(t\.me|telegram\.me|telegram\.dog)/.+"></label>
+  <label>Tipo
+    <select name="type">
+      <option value="group" {{ 'selected' if d and d.type=='group' }}>Grupo</option>
+      <option value="channel" {{ 'selected' if d and d.type=='channel' }}>Canal</option>
+    </select></label>
+  <label>Categoria
+    <select name="category_id" required>
+      {% for c in cats %}<option value="{{ c.id }}" {{ 'selected' if d and d.category_id==c.id }}>{{ c.name }}</option>{% endfor %}
+    </select></label>
+  <label>Descrição
+    <textarea name="description" required maxlength="500" rows="4">{{ d.description if d else '' }}</textarea></label>
+  <label>Palavras-chave (separadas por vírgula)
+    <input name="keywords" value="{{ d.keywords if d else '' }}" maxlength="200" placeholder="futebol, brasileirão, ao vivo"></label>
+  <label>Imagem de capa (JPG/PNG/WebP, até 2 MB)
+    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp"></label>
+  <button class="btn btn-neon btn-block" type="submit">{{ 'Salvar alterações' if editing else 'Enviar para moderação' }}</button>
+  {% if editing and editing.status == 'approved' %}<p class="foot-note">Alterações em publicação aprovada voltam para revisão da moderação.</p>{% endif %}
+</form>
+</div>
+{% endblock %}

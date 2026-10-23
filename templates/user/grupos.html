@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_f with context %}
+{% block title %}Minhas publicações{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Minhas publicações</h1>
+<a class="btn btn-neon" href="{{ url_for('user.new_group') }}">+ Enviar grupo/canal</a>
+<table class="tbl">
+<tr><th>Nome</th><th>Tipo</th><th>Status</th><th>Visualizações</th><th></th></tr>
+{% for r in rows %}
+<tr>
+  <td><a href="/grupos/{{ r.slug }}">{{ r.name }}</a></td>
+  <td>{{ 'Canal' if r.type=='channel' else 'Grupo' }}</td>
+  <td><span class="st st-{{ r.status }}">{{ {'pending':'aguardando','approved':'publicada','rejected':'rejeitada','removed':'removida'}[r.status] }}</span>
+    {% if r.status == 'rejected' and r.rejection_reason %}<small class="foot-note">Motivo: {{ r.rejection_reason }}</small>{% endif %}</td>
+  <td>{{ r.views }}</td>
+  <td>{% if r.status != 'removed' %}<a class="btn btn-line btn-sm" href="{{ url_for('user.edit_group', gid=r.id) }}">Editar</a>{% endif %}</td>
+</tr>
+{% else %}<tr><td colspan="5" class="empty">Nenhuma publicação enviada.</td></tr>{% endfor %}
+</table>
+{% endblock %}

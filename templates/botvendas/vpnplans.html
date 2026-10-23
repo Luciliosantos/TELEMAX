@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Planos VPN — Bot Vendas
+
+
+{% endblock %}
+{% block content %}
+<section class="sec">
+  <h2 class="sec-h">🤖 Central do Bot</h2>
+{% include "botvendas/partials/_tabs.html" %}
+  <div class="mod-card">
+    <h3 id="vpn-form-title">Novo plano</h3>
+    <form id="vpn-plan-form" method="post" class="form" action="{{ url_for('botvendas.vpn_plano_salvar') }}">
+      <input type="hidden" name="id" id="vpn-plan-id" value="">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Nome<input name="name" required placeholder="Acesso 30 dias"></label>
+      <div class="inline-form">
+        <label>Preço (R$)<input name="price" required placeholder="15.00"></label>
+        <label>Validade (dias)<input name="days" required value="30" style="max-width:100px"></label>
+        <label>Conexões simultâneas<input name="max_connections" value="1" style="max-width:100px"></label>
+      </div>
+      <button class="btn btn-neon btn-sm" type="submit">Salvar</button>
+    </form>
+  </div>
+  <div class="mod-card">
+    <h3>🎁 Configuração do teste grátis</h3>
+    <p>Configure o teste independentemente dos planos pagos.</p>
+    <form method="post" class="form" action="{{ url_for('botvendas.vpn_teste_salvar') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label class="inline">
+        <input type="checkbox" name="test_enabled" value="1"
+          {% if cfg['test_enabled'] %}checked{% endif %}>
+        Ativar teste grátis
+      </label>
+      <label>Duração do teste (horas)
+        <input type="number" name="test_duration_hours" min="1" max="24"
+          value="{{ cfg['test_duration_hours'] or 2 }}" required style="max-width:120px">
+      </label>
+      <button class="btn btn-neon btn-sm" type="submit">Salvar teste grátis</button>
+    </form>
+  </div>
+  {% for p in planos %}
+  <div class="row-line {{ 'ok' if p['is_active'] }}">
+    <div><b>{{ p['name'] }}</b> — {{ p['price_cents']|cents }} · {{ p['days'] }} dias ·
+      {{ p['max_connections'] }} conn ·
+      {% if p['is_test'] %}TESTE {{ p['test_hours'] or 2 }}h{% else %}venda{% endif %}
+      {% if refs_por_plano.get(p['id']) %}<br>
+        <span class="foot-note">🔗 usado por {{ refs_por_plano[p['id']] }} botão(ões) —
+        a exclusão será bloqueada enquanto houver associação</span>{% endif %}
+      {% if vendas_por_plano.get(p['id']) %}<br>
+        <span class="foot-note">🧾 {{ vendas_por_plano[p['id']] }} venda(s) no histórico —
+        prefira desativar para preservar o registro</span>{% endif %}</div>
+    <div class="inline-form">
+      <button class="btn btn-line btn-sm btn-editar-plano" type="button"
+        data-id="{{ p['id'] }}"
+        data-nome="{{ p['name']|e }}"
+        data-preco="{{ '%.2f'|format(p['price_cents'] / 100) }}"
+        data-dias="{{ p['days'] }}"
+        data-conexoes="{{ p['max_connections'] }}"
+        data-ativo="{{ p['is_active'] }}">✏️ Editar</button>
+      <form method="post" action="{{ url_for('botvendas.vpn_plano_toggle', pid=p['id']) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-line btn-sm">{{ 'Desativar' if p['is_active'] else 'Ativar' }}</button>
+      </form>
+      <form method="post" action="{{ url_for('botvendas.vpn_plano_remover', pid=p['id']) }}"
+            onsubmit="return confirm('Remover este plano? Se algum botão ou venda o referenciar, a exclusão será bloqueada e você verá o motivo.')">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-line btn-sm">🗑️</button>
+      </form>
+    </div>
+  </div>
+  {% else %}<p class="empty">Nenhum plano VPN cadastrado.</p>{% endfor %}
+</section>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".btn-editar-plano").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      const f = document.getElementById("vpn-plan-form");
+      if (!f) {
+        alert("Formulário de edição não encontrado.");
+        return;
+      }
+
+      f.elements["id"].value = botao.dataset.id;
+      f.elements["name"].value = botao.dataset.nome;
+      f.elements["price"].value = botao.dataset.preco;
+      f.elements["days"].value = botao.dataset.dias;
+      f.elements["max_connections"].value = botao.dataset.conexoes;
+
+      let ativo = f.elements["is_active"];
+      if (!ativo) {
+        ativo = document.createElement("input");
+        ativo.type = "hidden";
+        ativo.name = "is_active";
+        f.appendChild(ativo);
+      }
+      ativo.value = botao.dataset.ativo;
+
+      document.getElementById("vpn-form-title").textContent =
+        "Editar plano #" + botao.dataset.id;
+      f.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+});
+</script>
+{% endblock %}

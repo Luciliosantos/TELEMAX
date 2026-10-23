@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Bot Vendas VPN — Configurações{% endblock %}
+{% block content %}
+<section class="sec">
+  <h2 class="sec-h">🤖 Central do Bot</h2>
+{% include "botvendas/partials/_tabs.html" %}
+
+  <div class="mod-card">
+    <h3>🤖 Bot Telegram</h3>
+    <p class="foot-note">Token atual: {{ token_mask or 'nenhum' }} (@{{ cfg['bot_username'] or '?' }})</p>
+    <form method="post" class="form" action="{{ url_for('botvendas.config_bot') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Token do bot (BotFather)<input name="bot_token" placeholder="123456:ABC-..." autocomplete="off"></label>
+      <button class="btn btn-neon btn-sm" type="submit">Salvar token</button>
+    </form>
+    <h4>Vínculo do proprietário</h4>
+    <p class="foot-note">Dono atual: <b>{{ cfg['owner_tg_id'] or 'nenhum' }}</b>. No Telegram, envie:
+       <code>/vincular {{ cfg['link_code'] }}</code></p>
+
+    <form method="post" class="form" action="{{ url_for('botvendas.config_bot') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="acao" value="salvar_owner_id">
+      <label>ID numérico do proprietário no Telegram
+        <input name="owner_tg_id" inputmode="numeric" pattern="[0-9]{5,15}"
+               placeholder="Ex.: 123456789" autocomplete="off" required>
+      </label>
+      <button class="btn btn-neon btn-sm" type="submit">Salvar ID do proprietário</button>
+    </form>
+
+    <form method="post" action="{{ url_for('botvendas.config_bot') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-line btn-sm" name="acao" value="novocodigo">Gerar novo código</button>
+      <button class="btn btn-line btn-sm" name="acao" value="desvincular">Desvincular (para o bot)</button>
+    </form>
+  </div>
+
+  <div class="mod-card">
+    <h3>🖥️ Servidor / VPS</h3>
+    <p class="foot-note">Conexão SSH, teste, impressão digital e instalação da chave
+    ficam na página própria do servidor.</p>
+    <a class="btn btn-neon btn-sm" href="{{ url_for('botvendas.vps_page') }}">Abrir Servidor/VPS →</a>
+  </div>
+
+  <div class="mod-card">
+    <h3>💳 Mercado Pago (recebimentos do SEU bot)</h3>
+    <p class="foot-note">Token atual: {{ mp_mask or 'nenhum' }}. Os pagamentos dos compradores
+    vão para a SUA conta; o TELEMAX nunca compartilha tokens entre clientes.</p>
+    <form method="post" class="form" action="{{ url_for('botvendas.config_mp') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Access token (APP_USR-… ou TEST-…)<input name="mp_token" autocomplete="off"></label>
+      <button class="btn btn-neon btn-sm" type="submit">Salvar token</button>
+    </form>
+  </div>
+
+  <div class="mod-card">
+    <h3>📲 Aplicativo (APK)</h3>
+    <p class="foot-note">Atual: {{ cfg['apk_filename'] or 'nenhum' }}
+       {% if cfg['apk_size'] %} ({{ (cfg['apk_size']//1024) }} KB){% endif %}</p>
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('botvendas.apk_upload') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Arquivo .apk (máx. 30MB)<input type="file" name="apk" accept=".apk"></label>
+      <button class="btn btn-neon btn-sm" type="submit">Enviar APK</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Editor do Bot — Bot Vendas
+{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/botvendas.css') }}">
+<section class="sec">
+  <h2 class="sec-h">🤖 Central do Bot</h2>
+{% include "botvendas/partials/_tabs.html" %}
+  <div class="cta-actions" style="margin:10px 0">
+    <a class="btn btn-line btn-sm" href="{{ url_for('botvendas.editor_preview') }}">👁️ Prévia</a>
+    <form method="post" action="{{ url_for('botvendas.editor_validar') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-line btn-sm">✔️ Validar</button>
+    </form>
+    <form method="post" action="{{ url_for('botvendas.editor_publicar') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-neon btn-sm">🚀 Publicar no bot</button>
+    </form>
+    <form method="post" action="{{ url_for('botvendas.editor_menu_novo') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-line btn-sm">➕ Novo submenu</button>
+    </form>
+  </div>
+
+  <div class="mod-card">
+    <h3>Mensagens</h3>
+    <form method="post" class="form" action="{{ url_for('botvendas.editor_texto') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="campo" value="welcome">
+      <label>Boas-vindas (/start)<textarea name="valor" rows="2">{{ layout.welcome }}</textarea></label>
+      <button class="btn btn-neon btn-sm">Salvar boas-vindas</button>
+    </form>
+    <form method="post" class="form" action="{{ url_for('botvendas.editor_texto') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="campo" value="support">
+      <label>Suporte<textarea name="valor" rows="2">{{ layout.support }}</textarea></label>
+      <button class="btn btn-neon btn-sm">Salvar suporte</button>
+    </form>
+  </div>
+
+  {% for key, menu in layout.menus.items() %}
+  <div class="mod-card">
+    <h3>Menu: {{ key }} {{ '(principal)' if key=='main' else '' }}</h3>
+    {% if key != 'main' %}
+    <form method="post" class="form"
+          action="{{ url_for('botvendas.editor_menu_remover', key=key) }}"
+          onsubmit="return confirm('Tem certeza que deseja excluir este submenu?');">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-line btn-sm">🗑️ Excluir submenu</button>
+    </form>
+    {% endif %}
+
+    <form method="post" class="form" action="{{ url_for('botvendas.editor_menu_texto', key=key) }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Texto do menu<textarea name="valor" rows="2">{{ menu.text }}</textarea></label>
+      <button class="btn btn-line btn-sm">Salvar texto</button>
+    </form>
+    <p class="foot-note">Botões (em ordem):</p>
+    {% for row in menu.rows %}{% set rid = loop.index0 %}{% for b in row %}{% set bid = loop.index0 %}
+    <div class="row-line">
+      <div><span class="tgbtn">{{ b.text }}</span><br>
+        <small class="foot-note">ação: <code>{{ b.action }}</code></small></div>
+      <div class="inline-form">
+        <form method="post" action="{{ url_for('botvendas.editor_botao_acao', key=key, rid=rid, bid=bid) }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn btn-line btn-sm" name="op" value="up">↑</button>
+          <button class="btn btn-line btn-sm" name="op" value="down">↓</button>
+          <button class="btn btn-line btn-sm" name="op" value="remove">🗑️</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}{% endfor %}
+    <form method="post" class="form" action="{{ url_for('botvendas.editor_botao_novo', key=key) }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Texto do botão (emoji livre)<input name="text" placeholder="💰 COMPRAR 🔐"></label>
+      <label>Ação
+        <select name="action" class="acao-botao">
+          <option value="test">gerar teste</option>
+          <option value="apk">enviar APK</option>
+          <option value="support">suporte</option>
+          {% for v in vpn %}<option value="buy:{{ v['id'] }}">comprar plano: {{ v['name'] }}</option>{% endfor %}
+          {% for k in layout.menus %}{% if k != key %}<option value="menu:{{ k }}">abrir menu {{ k }}</option>{% endif %}{% endfor %}
+          <option value="link">abrir link</option>
+          <option value="msg">enviar mensagem</option>
+        </select>
+      </label>
+      <label class="campo-link">Endereço do link
+        <input name="url" type="url" placeholder="https://exemplo.com">
+      </label>
+      <label class="campo-msg">Mensagem enviada ao cliente
+        <textarea name="message" rows="3" maxlength="3500" placeholder="Digite a mensagem"></textarea>
+      </label>
+      <button class="btn btn-neon btn-sm">➕ Adicionar botão</button>
+    </form>
+
+  </div>
+  {% endfor %}
+  <p class="foot-note">⚠️ O botão ⚙️ ADMINISTRAÇÃO é sempre injetado para o dono e não pode
+     ser removido pelo editor. A verificação de pagamento acontece sempre no servidor.</p>
+</section>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll('form[action*="/botao/novo"]').forEach(function (form) {
+    var acao = form.querySelector('select[name="action"]');
+    var link = form.querySelector(".campo-link");
+    var msg = form.querySelector(".campo-msg");
+
+    if (!acao || !link || !msg) return;
+
+    function atualizarCampos() {
+      link.style.display = acao.value === "link" ? "" : "none";
+      msg.style.display = acao.value === "msg" ? "" : "none";
+
+      var entradaLink = link.querySelector("input");
+      var entradaMsg = msg.querySelector("textarea");
+
+      entradaLink.required = acao.value === "link";
+      entradaMsg.required = acao.value === "msg";
+    }
+
+    acao.addEventListener("change", atualizarCampos);
+    atualizarCampos();
+  });
+});
+</script>
+{% endblock %}

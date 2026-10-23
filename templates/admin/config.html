@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_f with context %}
+{% block title %}Configurações — Admin{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Configurações do site</h1>
+<form method="post" class="form">
+  {{ csrf_f() }}
+  <label>Nome do site <input name="site_name" value="{{ vals.get('site_name','TELEMAX') }}" maxlength="60"></label>
+  <label>Frase de efeito <input name="site_tagline" value="{{ vals.get('site_tagline','') }}" maxlength="200"></label>
+  <label>E-mail de contato <input name="contact_email" value="{{ vals.get('contact_email','') }}" maxlength="200"></label>
+  <button class="btn btn-neon" type="submit">Salvar</button>
+</form>
+<p class="foot-note">Preços e planos são gerenciados em “Planos”. Domínio e HTTPS são configurados no servidor (ver docs/DEPLOY.md).</p>
+{% endblock %}

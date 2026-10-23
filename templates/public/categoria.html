@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_macros.html" import group_card, pagination, banner_slot with context %}
+{% block title %}{{ cat.name }} — Grupos e Canais de {{ cat.name }} | {{ site_name }}{% endblock %}
+{% block description %}Lista de grupos e canais do Telegram sobre {{ cat.name }}. {{ cat.description }} Publicações verificadas e organizadas no TELEMAX.{% endblock %}
+{% block canonical %}{{ request.base_url }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="/">Início</a> › <span>{{ cat.name }}</span></nav>
+<header class="cat-head">
+  <h1>{{ cat.name }}</h1>
+  <p>{{ cat.description or 'Grupos e canais do Telegram sobre ' ~ cat.name ~ ', publicados e moderados pela comunidade TELEMAX.' }}</p>
+</header>
+{{ banner_slot(banners, 'home_top') }}
+<div class="grid">
+  {% for g in rows %}{{ group_card(g, sponsored=(g.id in sponsored)) }}{% else %}<p class="empty">Ainda não há publicações aprovadas nesta categoria. <a href="{{ url_for('auth.register') }}">Seja o primeiro a publicar!</a></p>{% endfor %}
+</div>
+{{ pagination(page, pages, 'public.category', slug=cat.slug) }}
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_f with context %}
+{% block title %}Usuários — Admin{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Usuários</h1>
+<table class="tbl">
+<tr><th>Apelido</th><th>E-mail</th><th>Perfil</th><th>Publicações</th><th>Status</th><th>Ações</th></tr>
+{% for u in rows %}
+<tr>
+  <td>{{ u.nickname }}</td><td>{{ u.email }}</td>
+  <td>{{ u.role }}</td><td>{{ u.grupos }}</td>
+  <td><span class="st {{ 'st-approved' if u.is_active else 'st-removed' }}">{{ 'ativo' if u.is_active else 'inativo' }}</span></td>
+  <td>
+    <form method="post" action="{{ url_for('admin.user_action', uid=u.id) }}" class="inline-form">
+      {{ csrf_f() }}
+      {% if u.id != current_user.id %}
+        {% if u.is_active %}<button class="btn btn-line btn-sm" name="acao" value="desativar">Desativar</button>
+        {% else %}<button class="btn btn-neon btn-sm" name="acao" value="ativar">Ativar</button>{% endif %}
+        {% if u.role=='user' %}<button class="btn btn-line btn-sm" name="acao" value="tornar_admin">Tornar admin</button>
+        {% else %}<button class="btn btn-line btn-sm" name="acao" value="remover_admin">Remover admin</button>{% endif %}
+      {% endif %}
+    </form>
+  </td>
+</tr>
+{% else %}<tr><td colspan="6" class="empty">Nenhum usuário.</td></tr>{% endfor %}
+</table>
+{% if pages > 1 %}<p class="pager-info">Página {{ page }} de {{ pages }}</p>{% endif %}
+{% endblock %}

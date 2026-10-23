@@ -1,0 +1,22 @@
+{#
+Barra de abas da Central do Bot — presente em TODAS as páginas de
+gerenciamento do módulo (Bot Telegram, Planos VPN, Editor do Bot, Vendas).
+A página Servidor/VPS é a ÚNICA separada, acessada pelo botão próprio abaixo.
+#}
+{% set _abas = {"botvendas.config_page": "bot", "botvendas.vpn_planos": "planos",
+                "botvendas.editor": "editor", "botvendas.vendas": "vendas",
+                "botvendas.vps_page": "vps"} %}
+{% set aba = _abas.get(request.endpoint, "") %}
+<div class="panel-nav">
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('botvendas.panel') }}">← Painel</a>
+  <a class="btn {{ 'btn-neon' if aba == 'bot' else 'btn-line' }} btn-sm"
+     href="{{ url_for('botvendas.config_page') }}">⚙️ Bot Telegram</a>
+  <a class="btn {{ 'btn-neon' if aba == 'planos' else 'btn-line' }} btn-sm"
+     href="{{ url_for('botvendas.vpn_planos') }}">📋 Planos VPN</a>
+  <a class="btn {{ 'btn-neon' if aba == 'editor' else 'btn-line' }} btn-sm"
+     href="{{ url_for('botvendas.editor') }}">🎨 Editor do Bot</a>
+  <a class="btn {{ 'btn-neon' if aba == 'vendas' else 'btn-line' }} btn-sm"
+     href="{{ url_for('botvendas.vendas') }}">💰 Vendas</a>
+  <a class="btn {{ 'btn-neon' if aba == 'vps' else 'btn-line' }} btn-sm"
+     href="{{ url_for('botvendas.vps_page') }}">🖥️ Servidor/VPS</a>
+</div>

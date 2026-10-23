@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_macros.html" import group_card with context %}
+{% block title %}{{ g_.name }} — {{ 'Canal' if g_.type=='channel' else 'Grupo' }} de Telegram{% endblock %}
+{% block description %}{{ g_.description[:150] }}{% endblock %}
+{% block canonical %}{{ request.base_url }}{% endblock %}
+{% block content %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","name":"{{ g_.name }}","description":{{ g_.description[:150]|tojson}}}
+</script>
+<nav class="crumbs"><a href="/">Início</a> › {% if g_.category_slug %}<a href="/categorias/{{ g_.category_slug }}">{{ g_.category_name }}</a> › {% endif %}<span>{{ g_.name }}</span></nav>
+<div class="detail {{ 'detail-spon' if sponsored }}">
+  {% if sponsored %}<span class="badge badge-spon">★ DESTAQUE PATROCINADO</span>{% endif %}
+  {% if g_.is_demo %}<span class="badge badge-demo">CONTEÚDO DE DEMONSTRAÇÃO — não é um grupo real</span>{% endif %}
+  <div class="detail-hero">
+    {% if g_.image_path %}<img src="{{ url_for('public.upload', filename=g_.image_path) }}" alt="{{ g_.name }}">
+    {% else %}<div class="card-img-fallback big"><span>{{ g_.name[:1]|upper }}</span></div>{% endif %}
+    <div>
+      <h1>{{ g_.name }}</h1>
+      <div class="detail-meta">
+        <span class="chip chip-{{ g_.type }}">{{ 'Canal' if g_.type == 'channel' else 'Grupo' }}</span>
+        {% if g_.category_name %}<a class="chip cat" href="/categorias/{{ g_.category_slug }}">{{ g_.category_name }}</a>{% endif %}
+        <span class="views">👁 {{ g_.views }} visualizações</span>
+        {% if g_.published_at %}<span>Publicado em {{ g_.published_at[:10]|datebr }}</span>{% endif %}
+      </div>
+      <p class="detail-desc">{{ g_.description }}</p>
+      {% if g_.keywords %}<p class="keywords">{% for k in g_.keywords.split(',') %}<span class="chip">{{ k.strip() }}</span>{% endfor %}</p>{% endif %}
+      <a class="btn btn-neon btn-tg btn-big" href="{{ g_.link }}" rel="nofollow noopener" target="_blank">Entrar no Telegram →</a>
+    </div>
+  </div>
+</div>
+{% if related %}
+<section class="sec">
+  <h2 class="sec-h">Relacionados em {{ g_.category_name or 'Telegram' }}</h2>
+  <div class="grid">
+    {% for g in related %}{{ group_card(g) }}{% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Criar conta — {{ site_name }}{% endblock %}
+{% block robots %}noindex,follow{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <h1>Criar conta grátis</h1>
+  <form method="post" class="form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>Apelido <input name="nickname" value="{{ nickname }}" required maxlength="30" pattern="[A-Za-z0-9_.-]{3,30}"></label>
+    <label>E-mail <input type="email" name="email" value="{{ email }}" required maxlength="254"></label>
+    <label>Senha <input type="password" name="password" required minlength="8" placeholder="Mín. 8 caracteres com letras e números"></label>
+    <label>Confirmar senha <input type="password" name="password2" required></label>
+    <button class="btn btn-neon btn-block" type="submit">Criar conta</button>
+  </form>
+  <p class="auth-links">Já tem conta? <a href="/entrar">Entrar</a></p>
+</div>
+{% endblock %}

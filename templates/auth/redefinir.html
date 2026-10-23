@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Redefinir senha{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <h1>Redefinir senha</h1>
+  <form method="post" class="form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>Nova senha <input type="password" name="password" required minlength="8"></label>
+    <label>Confirmar senha <input type="password" name="password2" required></label>
+    <button class="btn btn-neon btn-block" type="submit">Salvar nova senha</button>
+  </form>
+</div>
+{% endblock %}

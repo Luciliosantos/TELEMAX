@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_f with context %}
+{% block title %}Importar grupos — {{ site_name }}{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Importar grupos em massa</h1>
+<p>Envie um arquivo, confira a prévia e confirme. Grupos e canais válidos serão publicados automaticamente. A descrição é opcional.</p>
+<p>Formatos aceitos: <strong>CSV, Excel (.xlsx/.xls), JSON, PDF e TXT</strong>. Até 5 MB e 500 registros. Cabeçalhos reconhecidos: <code>nome, link_telegram, categoria, descricao, tipo</code>. A categoria será criada automaticamente quando não existir; se vier vazia, será usada a categoria “Outros”.</p>
+<p>Para identificar o tipo, informe <code>grupo</code> ou <code>canal</code> na coluna <code>tipo</code>. Se essa coluna faltar, o sistema considera grupo. PDFs precisam conter texto selecionável e linhas com colunas separadas por <code>|</code>, ponto e vírgula ou tabulação; PDFs escaneados precisam de OCR.</p>
+
+<form class="panel" method="post" enctype="multipart/form-data">
+  {{ csrf_f() }}
+  <input type="hidden" name="action" value="preview">
+  <label for="arquivo">Arquivo para importação (até 5 MB e 500 registros)</label>
+  <input id="arquivo" name="arquivo" type="file" accept=".csv,.xlsx,.xlsm,.xls,.json,.pdf,.txt,text/csv,application/pdf,application/json,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" required>
+  <button class="btn btn-neon" type="submit">CARREGAR E CONFERIR</button>
+</form>
+
+{% if rows is not none %}
+  <h2 class="sec-h">Prévia da importação</h2>
+  <p>Válidos: <strong>{{ rows|selectattr('valido')|list|length }}</strong> |
+     Ignorados por erro ou duplicidade:
+     <strong>{{ rows|rejectattr('valido')|list|length }}</strong></p>
+  <div style="overflow-x:auto">
+    <table class="tbl">
+      <tr><th>Linha</th><th>Nome</th><th>Link</th><th>Tipo</th><th>Categoria</th><th>Resultado</th></tr>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.linha }}</td>
+        <td>{{ r.nome }}</td>
+        <td>{{ r.link }}</td>
+        <td>{{ "Canal" if r.tipo == "channel" else "Grupo" }}</td>
+        <td>{{ r.categoria }}{% if r.categoria_nova %} <strong>(será criada)</strong>{% endif %}</td>
+        <td>{% if r.valido %}{{ r.motivo }}{% else %}<strong>Erro:</strong> {{ r.motivo }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% if rows|selectattr('valido')|list|length %}
+  <form method="post" class="panel">
+    {{ csrf_f() }}
+    <input type="hidden" name="action" value="confirm">
+    <input type="hidden" name="payload" value='{{ rows|tojson }}'>
+    <p>Ao confirmar, os registros válidos serão publicados imediatamente. As categorias ausentes serão criadas durante a importação. Registros duplicados ou com link inválido serão ignorados com o motivo exibido acima.</p>
+    <button class="btn btn-neon" type="submit">CONFIRMAR E PUBLICAR</button>
+  </form>
+  {% endif %}
+{% endif %}
+<a class="btn btn-line" href="{{ url_for('admin.dashboard') }}">Voltar ao painel</a>
+{% endblock %}

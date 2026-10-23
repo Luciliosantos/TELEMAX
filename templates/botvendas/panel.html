@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Bot Vendas VPN — Painel{% endblock %}
+{% block content %}
+<section class="sec">
+  <h2 class="sec-h">🤖 Bot Vendas VPN — Painel</h2>
+  <div class="panel-nav">
+    <a class="btn btn-neon btn-sm" href="{{ url_for('botvendas.config_page') }}">⚙️ Configurações</a>
+    <a class="btn btn-line btn-sm" href="{{ url_for('botvendas.vpn_planos') }}">📋 Planos VPN</a>
+    <a class="btn btn-line btn-sm" href="{{ url_for('botvendas.editor') }}">🎨 Editor do Bot</a>
+    <a class="btn btn-line btn-sm" href="{{ url_for('botvendas.vendas') }}">💰 Vendas</a>
+  </div>
+  <div class="stat-row">
+    <div class="stat"><b>{{ stats|map(attribute='n')|sum if stats else 0 }}</b><span>vendas (todas)</span></div>
+    <div class="stat"><b>{{ sub.plan_name }}</b><span>assinatura {{ sub.status }}</span></div>
+    <div class="stat"><b>{{ sub.ends_at[:10]|datebr }}</b><span>válida até</span></div>
+    <div class="stat"><b>{{ 'rodando' if vivo else cfg['bot_status'] }}</b><span>estado do bot</span></div>
+  </div>
+  <div class="card" style="padding:16px;margin:10px 0">
+    <h3 style="margin:0 0 8px">Estado do bot</h3>
+    <p class="foot-note">Token: {{ token_mask or 'não configurado' }} ·
+       Dono Telegram: {{ cfg['owner_tg_id'] or 'não vinculado' }} ·
+       VPS: {{ 'OK ✔' if cfg['vps_ok'] else 'não testada' }} ·
+       Mercado Pago: {{ mp_mask or 'não configurado' }} ·
+       APK: {{ cfg['apk_filename'] or 'não enviado' }}</p>
+    <form method="post" action="{{ url_for('botvendas.bot_controle') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      {% if not vivo %}
+      <button class="btn btn-neon btn-sm" name="acao" value="publicar">▶️ Publicar e iniciar bot</button>
+      {% else %}
+      <button class="btn btn-line btn-sm" name="acao" value="parar">⏹️ Parar bot</button>
+      {% endif %}
+    </form>
+    {% if cfg['bot_error'] %}<p class="flash erro" style="margin-top:10px">{{ cfg['bot_error'] }}</p>{% endif %}
+  </div>
+  <h3 class="sec-h" style="font-size:1rem">Últimas vendas</h3>
+  {% if vendas %}
+  <div class="tb-wrap"><table class="tbl">
+    <tr><th>Data</th><th>Comprador</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Usuário SSH</th></tr>
+    {% for v in vendas %}
+    <tr><td>{{ v['created_at'][:16] }}</td><td>{{ v['buyer_name'] or v['buyer_tg_id'] }}</td>
+        <td>{{ 'Teste' if v['kind']=='test' else 'Venda' }}</td><td>{{ (v['amount_cents'] or 0)|cents }}</td>
+        <td>{{ v['status'] }}</td><td>{{ v['ssh_user'] or '-' }}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">Nenhuma venda ainda.</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Pagamentos — Admin{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Pagamentos</h1>
+<table class="tbl">
+<tr><th>Data</th><th>Usuário</th><th>Publicação</th><th>Plano</th><th>Valor</th><th>Gateway</th><th>Ref.</th><th>Status</th></tr>
+{% for p in rows %}
+<tr><td>{{ p.created_at[:16] }}</td><td>{{ p.nickname or '-' }}</td><td>{{ p.group_name or '-' }}</td>
+<td>{{ p.plan_name or '-' }}</td><td>{{ p.amount_cents|cents }}</td><td>{{ p.provider }}</td>
+<td class="foot-note">{{ p.provider_ref or '-' }}</td><td>{{ p.status }}</td></tr>
+{% else %}<tr><td colspan="8" class="empty">Nenhum pagamento.</td></tr>{% endfor %}
+</table>
+{% if pages > 1 %}<p class="pager-info">Página {{ page }} de {{ pages }}
+ {% if page > 1 %}<a class="btn btn-line btn-sm" href="{{ url_for('admin.payments_admin', page=page-1) }}">←</a>{% endif %}
+ {% if page < pages %}<a class="btn btn-line btn-sm" href="{{ url_for('admin.payments_admin', page=page+1) }}">→</a>{% endif %}</p>{% endif %}
+{% endblock %}

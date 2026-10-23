@@ -1,0 +1,51 @@
+{% macro csrf_f() %}<input type="hidden" name="_csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro group_card(g, sponsored=False) %}
+<div class="card {{ 'card-spon' if sponsored }}">
+  {% if sponsored %}<span class="badge badge-spon">★ PATROCINADO</span>{% endif %}
+  {% if g.is_demo %}<span class="badge badge-demo">DEMONSTRAÇÃO</span>{% endif %}
+  {% if g.image_path %}
+    <img class="card-img" src="{{ url_for('public.upload', filename=g.image_path) }}" alt="{{ g.name }}" loading="lazy">
+  {% else %}
+    <div class="card-img card-img-fallback"><span>{{ g.name[:1]|upper }}</span></div>
+  {% endif %}
+  <div class="card-body">
+    <div class="card-top">
+      <h3><a href="/grupos/{{ g.slug }}">{{ g.name }}</a></h3>
+      <span class="chip chip-{{ g.type }}">{{ 'Canal' if g.type == 'channel' else 'Grupo' }}</span>
+    </div>
+    <p class="card-desc">{{ g.description[:140] }}{% if g.description|length > 140 %}…{% endif %}</p>
+    <div class="card-meta">
+      {% if g.category_name %}<a class="chip cat" href="/categorias/{{ g.category_slug }}">{{ g.category_name }}</a>{% endif %}
+      <span class="views">👁 {{ g.views }} visualizações</span>
+    </div>
+    <div class="card-actions">
+      <a class="btn btn-neon btn-tg" href="{{ g.link }}" rel="nofollow noopener" target="_blank">Abrir no Telegram →</a>
+      <a class="btn btn-line" href="/grupos/{{ g.slug }}">Detalhes</a>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro pagination(page, pages, endpoint) %}
+{% if pages > 1 %}
+<div class="pager">
+  {% if page > 1 %}<a class="btn btn-line" href="{{ url_for(endpoint, page=page-1, **kwargs) }}">← Anterior</a>{% endif %}
+  <span class="pager-info">Página {{ page }} de {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-line" href="{{ url_for(endpoint, page=page+1, **kwargs) }}">Próxima →</a>{% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro banner_slot(banners, position) %}
+{% set slot_banners = banners|selectattr('position', 'equalto', position)|list %}
+{% if slot_banners %}
+<div class="banner-carousel" data-banner-carousel>
+  {% for b in slot_banners %}
+  <a class="banner" href="/banner/{{ b.id }}" rel="nofollow noopener" target="_blank">
+    <img src="{{ url_for('public.upload', filename=b.image_path) }}" alt="{{ b.title }}">
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}

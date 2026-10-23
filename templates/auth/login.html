@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Entrar — {{ site_name }}{% endblock %}
+{% block robots %}noindex,follow{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <h1>Entrar</h1>
+  <form method="post" class="form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <label>E-mail <input type="email" name="email" value="{{ email }}" required maxlength="254"></label>
+    <label>Senha <input type="password" name="password" required></label>
+    <button class="btn btn-neon btn-block" type="submit">Entrar</button>
+  </form>
+  <p class="auth-links"><a href="/recuperar">Esqueci minha senha</a> · <a href="/cadastro">Criar conta grátis</a></p>
+</div>
+{% endblock %}

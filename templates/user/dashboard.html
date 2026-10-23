@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Meu Painel — {{ site_name }}{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Meu Painel</h1>
+<div class="stat-row">
+  <div class="stat"><b>{{ meus|length }}</b><span>publicações</span></div>
+  <div class="stat"><b>{{ promos|length }}</b><span>destaques ativos</span></div>
+  <div class="stat"><b>{{ pay_count }}</b><span>pagamentos</span></div>
+</div>
+<div class="botvpn-box">
+  <div>
+    <h3>🤖 BOT VPN</h3>
+    <p>Seu bot no Telegram vende acessos VPN por Pix, cria contas SSH automaticamente na sua VPS,
+    entrega o APK e gerencia testes grátis — tudo pelo módulo BOT VENDAS AUT-VPN.</p>
+  </div>
+  <a class="btn btn-neon btn-big" href="{{ url_for('botvendas.panel') }}">BOT VPN</a>
+</div>
+<div class="panel-nav">
+  <a class="btn btn-neon" href="{{ url_for('user.new_group') }}">+ Enviar grupo/canal</a>
+  <a class="btn btn-line" href="{{ url_for('user.my_groups') }}">Minhas publicações</a>
+  <a class="btn btn-line" href="{{ url_for('user.promotions_page') }}">Destaques e planos</a>
+  <a class="btn btn-line" href="{{ url_for('user.payments_history') }}">Pagamentos</a>
+  <a class="btn btn-line" href="{{ url_for('user.account') }}">Minha conta</a>
+</div>
+<h2 class="sec-h">Destaques ativos</h2>
+{% for p in promos %}
+<div class="row-line ok"><b>{{ p.group_name }}</b> — {{ p.plan_name or 'destaque' }} até {{ p.ends_at[:10]|datebr }}</div>
+{% else %}<p class="empty">Nenhum destaque ativo. <a href="{{ url_for('user.promotions_page') }}">Contratar plano</a>.</p>{% endfor %}
+<h2 class="sec-h">Últimas publicações</h2>
+{% for m in meus[:6] %}
+<div class="row-line">
+  <a href="/grupos/{{ m.slug }}">{{ m.name }}</a>
+  <span class="st st-{{ m.status }}">{{ {'pending':'aguardando aprovação','approved':'publicada','rejected':'rejeitada','removed':'removida'}[m.status] }}</span>
+</div>
+{% else %}<p class="empty">Você ainda não publicou grupos ou canais.</p>{% endfor %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Logs — Admin{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Registro de auditoria</h1>
+<table class="tbl">
+<tr><th>Quando</th><th>Ator</th><th>Ação</th><th>Entidade</th><th>Detalhes</th><th>IP</th></tr>
+{% for l in rows %}
+<tr><td>{{ l.created_at[:19] }}</td><td>{{ l.nickname or 'sistema' }}</td><td>{{ l.action }}</td>
+<td>{{ l.entity }}#{{ l.entity_id }}</td><td class="foot-note">{{ l.details }}</td><td class="foot-note">{{ l.ip }}</td></tr>
+{% else %}<tr><td colspan="6" class="empty">Sem registros.</td></tr>{% endfor %}
+</table>
+{% if pages > 1 %}<p class="pager-info">Página {{ page }} de {{ pages }}
+ {% if page > 1 %}<a class="btn btn-line btn-sm" href="{{ url_for('admin.logs_admin', page=page-1) }}">←</a>{% endif %}
+ {% if page < pages %}<a class="btn btn-line btn-sm" href="{{ url_for('admin.logs_admin', page=page+1) }}">→</a>{% endif %}</p>{% endif %}
+{% endblock %}

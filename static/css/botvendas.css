@@ -1,0 +1,19 @@
+/* Módulo Bot Vendas VPN — só estilos novos, nada do site é alterado */
+.mod-card{background:linear-gradient(170deg,var(--card),#091430);border:1px solid var(--border);
+  border-radius:14px;padding:16px;margin:12px 0}
+.mod-card h3,.mod-card h4{margin:0 0 8px;color:var(--neon)}
+.mono{font-family:monospace;font-size:.8rem}
+.tgbtn{background:var(--neon-soft);border:1px solid var(--border);border-radius:8px;
+  padding:4px 10px;font-weight:700;font-size:.85rem}
+/* prévia do celular */
+.tgphone{max-width:320px;margin:14px auto;background:#0e1621;border:1px solid var(--border);
+  border-radius:18px;overflow:hidden}
+.tghead{background:#17212b;color:#fff;padding:10px 14px;font-weight:700;font-size:.9rem}
+.tgmsg{background:#2b5278;color:#fff;margin:12px;padding:10px 12px;border-radius:12px;
+  font-size:.9rem;white-space:pre-wrap}
+.tgkb{padding:0 12px 14px}
+.tgrow{display:flex;gap:6px;justify-content:center;margin:6px 0}
+.tgk{flex:1;text-align:center;background:#1c2b3a;color:var(--txt);border-radius:8px;
+  padding:8px 6px;font-size:.8rem;font-weight:600}
+.tgkadm{background:#3a2b1c;color:#ffd7a0}
+.tgkoff{opacity:.5}

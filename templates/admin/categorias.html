@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_f with context %}
+{% block title %}Categorias — Admin{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Categorias</h1>
+<form method="post" class="form inline-form">
+  {{ csrf_f() }}
+  <input name="name" placeholder="Nome da categoria" required maxlength="60">
+  <input name="description" placeholder="Descrição (opcional)" maxlength="300">
+  <button class="btn btn-neon" type="submit">Criar categoria</button>
+</form>
+<table class="tbl">
+<tr><th>Nome</th><th>Slug</th><th>Publicações</th><th>Ações</th></tr>
+{% for c in rows %}
+<tr><td>{{ c.name }}</td><td>{{ c.slug }}</td><td>{{ c.total }}</td>
+<td><form method="post" action="{{ url_for('admin.category_action', cid=c.id) }}" class="inline-form">
+  {{ csrf_f() }}
+  <button class="btn btn-line btn-sm" name="acao" value="renomear" onclick="this.form.name.value=prompt('Novo nome:', '{{ c.name }}')||'';return true" formnovalidate>Renomear</button>
+  <input type="hidden" name="name" value="">
+  <button class="btn btn-line btn-sm" name="acao" value="excluir" onclick="return confirm('Excluir categoria sem publicações aprovadas?')">Excluir</button>
+</form></td></tr>
+{% endfor %}
+</table>
+{% endblock %}

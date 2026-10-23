@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Pagamento — Assinatura Bot Vendas VPN{% endblock %}
+{% block content %}
+<section class="sec pay-wrap">
+  <h2 class="sec-h">Assinatura Bot Vendas VPN</h2>
+  <div class="pay-box">
+    <p class="pay-amount">{{ pay['amount_cents']|cents }}</p>
+    <p class="pay-target">Status: <b>{{ pay['status'] }}</b></p>
+    {% if pay['status'] == 'pending' %}
+    <p>Pague com o Pix copia e cola abaixo. A ativação é automática após a
+       confirmação segura do provedor.</p>
+    <div class="pix-copy"><textarea id="pix" readonly rows="4">{{ pay['pix_code'] }}</textarea>
+      <button class="btn btn-neon btn-block" data-copy="#pix">Copiar código Pix</button></div>
+    {% elif pay['status'] == 'paid' %}
+    <p>✅ Pagamento confirmado! Sua assinatura do módulo está ativa.</p>
+    <a class="btn btn-neon btn-block" href="{{ url_for('botvendas.panel') }}">Abrir o painel</a>
+    {% else %}
+    <p>Cobrança {{ pay['status'] }}. Tente contratar novamente.</p>
+    {% endif %}
+    {% if demo %}<p class="foot-note">Ambiente demo: use o webhook de teste para confirmar.</p>{% endif %}
+  </div>
+</section>
+{% endblock %}

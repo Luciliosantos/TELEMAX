@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_f with context %}
+{% block title %}Contatos — Admin{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Mensagens de contato</h1>
+{% for c in rows %}
+<div class="mod-card {{ 'lida' if c.handled }}">
+  <div><b>{{ c.name }}</b> &lt;{{ c.email }}&gt; · {{ c.created_at[:16] }}</div>
+  <p>{{ c.message }}</p>
+  {% if not c.handled %}
+  <form method="post" action="{{ url_for('admin.contact_read', cid=c.id) }}">{{ csrf_f() }}
+    <button class="btn btn-line btn-sm">Marcar como lida</button></form>
+  {% else %}<span class="st st-approved">lida</span>{% endif %}
+</div>
+{% else %}<p class="empty">Nenhuma mensagem.</p>{% endfor %}
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Minha conta{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<div class="auth-wrap wide">
+<h1>Minha conta</h1>
+<form method="post" action="{{ url_for('user.account') }}" class="form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>Apelido <input name="nickname" value="{{ current_user.nickname }}" required maxlength="30"></label>
+  <label>E-mail <input type="email" name="email" value="{{ current_user.email }}" required></label>
+  <button class="btn btn-neon" type="submit">Salvar dados</button>
+</form>
+<h2 class="sec-h">Alterar senha</h2>
+<form method="post" action="{{ url_for('user.change_password') }}" class="form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>Senha atual <input type="password" name="current" required></label>
+  <label>Nova senha <input type="password" name="password" required minlength="8"></label>
+  <label>Confirmar nova senha <input type="password" name="password2" required></label>
+  <button class="btn btn-line" type="submit">Alterar senha</button>
+</form>
+<p class="foot-note">Perdeu o acesso? Use a <a href="/recuperar">recuperação por e-mail</a>.</p>
+</div>
+{% endblock %}

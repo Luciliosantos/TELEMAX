@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_macros.html" import group_card, banner_slot with context %}
+{% block title %}TeleMax — Grupos e Canais do Telegram por Categoria{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Descubra os melhores <span class="neon">grupos e canais</span> do Telegram</h1>
+  <form class="hero-search" action="/busca" method="get">
+    <input type="search" name="q" placeholder="O que você procura? Ex.: futebol, filmes, vagas..." maxlength="100">
+    <button class="btn btn-neon" type="submit">Buscar</button>
+  </form>
+  <p class="hero-sub">{{ site_tagline }}</p>
+</section>
+{{ banner_slot(banners, 'home_top') }}
+<section class="sec">
+  <details class="cats-collapse">
+    <summary class="sec-h">Explorar por categoria</summary>
+    <div class="cats-grid">
+      {% for c in categories %}
+      <a class="cat-tile" href="/categorias/{{ c.slug }}">
+        <span class="cat-ico">{{ c.name[:1]|upper }}</span>
+        <span>{{ c.name }}</span><small>{{ c.total }} {{ 'publicação' if c.total == 1 else 'publicações' }}</small>
+      </a>
+      {% endfor %}
+    </div>
+  </details>
+</section>
+{% if featured %}
+<section class="sec">
+  <h2 class="sec-h">Destaques <small class="spon-note">patrocinados</small></h2>
+  <div class="grid">
+    {% for g in featured %}{{ group_card(g, sponsored=True) }}{% else %}<p class="empty">Nenhum destaque patrocinado no momento.</p>{% endfor %}
+  </div>
+</section>
+{% endif %}
+<section class="sec">
+  <h2 class="sec-h">Publicações recentes</h2>
+  <div class="grid">
+    {% for g in recent %}{{ group_card(g, sponsored=(g.id in (featured|map(attribute='id')|list))) }}{% else %}<p class="empty">Nenhuma publicação aprovada ainda.</p>{% endfor %}
+  </div>
+</section>
+<section class="sec">
+  <h2 class="sec-h">Populares <small class="spon-note">mais visualizados</small></h2>
+  <div class="grid">
+    {% for g in popular %}{{ group_card(g) }}{% else %}<p class="empty">Ainda sem dados de popularidade.</p>{% endfor %}
+  </div>
+</section>
+{{ banner_slot(banners, 'home_mid') }}
+<section class="cta-band">
+  <div>
+    <h2>Tem um grupo ou canal?</h2>
+    <p>Publique gratuitamente no TELEMAX e alcance milhares de pessoas. Quer aparecer ainda mais? Contrate um plano de destaque patrocinado com pagamento via Pix.</p>
+  </div>
+  <div class="cta-actions">
+    <a class="btn btn-neon" href="{{ url_for('auth.register') }}">Criar conta grátis</a>
+    <a class="btn btn-line" href="{{ url_for('user.promotions_page') }}">Ver planos</a>
+  </div>
+</section>
+{{ banner_slot(banners, 'home_bottom') }}
+{% endblock %}

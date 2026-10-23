@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Admin — Bot Vendas VPN{% endblock %}
+{% block content %}
+<section class="sec">
+  <h2 class="sec-h">🛠️ Admin: módulo Bot Vendas VPN</h2>
+  <div class="stat-row">
+    {% for st in ['ativa','pendente','expirada','cancelada','suspensa'] %}
+    <div class="stat"><b>{{ stats[st] }}</b><span>{{ st }}</span></div>
+    {% endfor %}
+    <div class="stat"><b>{{ receita|cents }}</b><span>receita do módulo</span></div>
+  </div>
+  <div class="panel-nav">
+    <a class="btn btn-line btn-sm" href="{{ url_for('botvendas.admin_assinaturas') }}">Assinaturas</a>
+    <a class="btn btn-line btn-sm" href="{{ url_for('botvendas.admin_pagamentos') }}">Pagamentos</a>
+  </div>
+  <div class="mod-card">
+    <h3>Criar / editar plano do módulo</h3>
+    <form method="post" class="form" action="{{ url_for('botvendas.admin_plano_salvar') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>Nome<input name="name" required placeholder="Bot Vendas — Mensal"></label>
+      <label>Descrição<input name="description" placeholder="Vendas ilimitadas no seu bot"></label>
+      <div class="inline-form">
+        <label>Preço (R$)<input name="price" required placeholder="49.90"></label>
+        <label>Duração (dias)<input name="days" value="30" style="max-width:100px"></label>
+        <label>Limite de planos VPN<input name="max_vpn_plans" value="3" style="max-width:100px"></label>
+      </div>
+      <label>Funcionalidades incluídas (texto)<input name="features" placeholder="Bot, VPS, Pix, APK, suporte"></label>
+      <button class="btn btn-neon btn-sm">Salvar plano</button>
+    </form>
+  </div>
+  {% for p in planos %}
+  <div class="row-line {{ 'ok' if p['is_active'] }}">
+    <div><b>{{ p['name'] }}</b> — {{ p['price_cents']|cents }} · {{ p['days'] }} dias ·
+      {{ p['max_vpn_plans'] }} planos VPN · {{ p['ativos'] }} assinantes ativos</div>
+    <div class="inline-form">
+      <form method="post" action="{{ url_for('botvendas.admin_plano_toggle', pid=p['id']) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-line btn-sm">{{ 'Desativar' if p['is_active'] else 'Ativar' }}</button>
+      </form>
+      <form method="post" action="{{ url_for('botvendas.admin_plano_remover', pid=p['id']) }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-line btn-sm">🗑️</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

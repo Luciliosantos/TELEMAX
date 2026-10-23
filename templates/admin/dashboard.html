@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Admin — {{ site_name }}{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Painel administrativo</h1>
+<div class="panel-nav">
+  <a class="btn btn-line" href="{{ url_for('admin.groups_admin') }}">Moderação</a>
+  <a class="btn btn-line" href="{{ url_for('admin.bulk_import_groups') }}">Importação</a>
+  <a class="btn btn-line" href="{{ url_for('admin.users_admin') }}">Usuários</a>
+  <a class="btn btn-line" href="{{ url_for('admin.categories_admin') }}">Categorias</a>
+  <a class="btn btn-line" href="{{ url_for('admin.plans_admin') }}">Planos</a>
+  <a class="btn btn-line" href="{{ url_for('botvendas.bv_admin') }}">Planos Bot Vendas VPN</a>
+  <a class="btn btn-line" href="{{ url_for('admin.payments_admin') }}">Pagamentos</a>
+  <a class="btn btn-line" href="{{ url_for('admin.destaques_admin') }}">Destaques</a>
+  <a class="btn btn-line" href="{{ url_for('admin.banners_admin') }}">Banners</a>
+  <a class="btn btn-line" href="{{ url_for('admin.settings_admin') }}">Configurações</a>
+  <a class="btn btn-line" href="{{ url_for('admin.logs_admin') }}">Logs</a>
+  <a class="btn btn-line" href="{{ url_for('admin.contacts_admin') }}">Contatos ({{ contatos }})</a>
+</div>
+<div class="stat-row">
+  <div class="stat"><b>{{ stats.usuarios }}</b><span>usuários</span></div>
+  <div class="stat"><b>{{ stats.grupos_aprovados }}</b><span>publicações</span></div>
+  <div class="stat"><b>{{ stats.grupos_pendentes }}</b><span>aguardando moderação</span></div>
+  <div class="stat"><b>{{ stats.promocoes_ativas }}</b><span>destaques ativos</span></div>
+  <div class="stat"><b>{{ stats.receita_pago|cents }}</b><span>receita confirmada</span></div>
+  <div class="stat"><b>{{ stats.pagamentos_pendentes }}</b><span>cobranças pendentes</span></div>
+</div>
+<h2 class="sec-h">Últimos pagamentos</h2>
+<table class="tbl">
+<tr><th>Data</th><th>Usuário</th><th>Publicação</th><th>Valor</th><th>Status</th></tr>
+{% for p in recent %}
+<tr><td>{{ p.created_at[:10]|datebr }}</td><td>{{ p.nickname or '-' }}</td><td>{{ p.group_name or '-' }}</td>
+<td>{{ p.amount_cents|cents }}</td><td>{{ p.status }}</td></tr>
+{% else %}<tr><td colspan="5" class="empty">Sem pagamentos.</td></tr>{% endfor %}
+</table>
+<h2 class="sec-h">Auditoria recente</h2>
+<table class="tbl">
+<tr><th>Quando</th><th>Ator</th><th>Ação</th><th>Entidade</th><th>Detalhes</th></tr>
+{% for l in logs %}
+<tr><td>{{ l.created_at[:16] }}</td><td>{{ l.nickname or 'sistema' }}</td><td>{{ l.action }}</td>
+<td>{{ l.entity }}#{{ l.entity_id }}</td><td>{{ l.details }}</td></tr>
+{% else %}<tr><td colspan="5" class="empty">Sem registros.</td></tr>{% endfor %}
+</table>
+{% endblock %}

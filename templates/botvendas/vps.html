@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Servidor/VPS — Bot Vendas{% endblock %}
+{% block content %}
+<section class="sec">
+  <h2 class="sec-h">🖥️ Servidor / VPS</h2>
+{% include "botvendas/partials/_tabs.html" %}
+  <p class="foot-note">Conexão SSH usada pelo seu bot para criar, renovar e revogar
+  acessos VPN. Configuração individual: cada cliente usa a própria VPS.</p>
+  <div class="mod-card">
+    <h3>🖥️ VPS própria</h3>
+    <p class="foot-note">Chave pública para instalar na VPS (authorized_keys):</p>
+    <p class="foot-note mono" style="word-break:break-all">{{ cfg['vps_pubkey'] or 'gere uma chave abaixo' }}</p>
+    <form method="post" class="form" action="{{ url_for('botvendas.config_vps') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label>IP / hostname<input name="vps_host" value="{{ cfg['vps_host'] or '' }}"></label>
+      <label>Porta SSH<input name="vps_port" value="{{ cfg['vps_port'] or 22 }}" style="max-width:120px"></label>
+      <label>Usuário SSH<input name="vps_user" value="{{ cfg['vps_user'] or 'botvendas' }}"></label>
+      <label class="inline"><input type="checkbox" name="vps_use_sudo" {{ 'checked' if cfg['vps_use_sudo'] }}>
+        usar <code>sudo -n</code> (usuário dedicado com privilégios mínimos)</label>
+      <div class="cta-actions">
+        <button class="btn btn-neon btn-sm" type="submit">Salvar VPS</button>
+        <button class="btn btn-line btn-sm" name="acao" value="gerarchave">Gerar nova chave SSH</button>
+      <label>Senha SSH inicial (usada somente nesta instalação)
+        <input type="password" name="vps_initial_password" autocomplete="off">
+      </label>
+        <button class="btn btn-line btn-sm" name="acao" value="capturar_fp">🔎 Capturar chave do servidor</button>
+        <button class="btn btn-line btn-sm" name="acao" value="instalar_chave">🔐 Instalar chave SSH automaticamente</button>
+
+        <button class="btn btn-line btn-sm" name="acao" value="testar">🧪 Testar conexão</button>
+      </div>
+    </form>
+    {% if cfg['vps_fingerprint'] %}
+    <div class="foot-note">
+      <p>Chave do servidor capturada ({{ cfg['vps_fp_type'] or 'SSH' }}):</p>
+      <p class="mono" style="word-break:break-all">{{ cfg['vps_fingerprint'] }}</p>
+      {% if cfg['vps_fp_confirmed_at'] %}
+        <p>Impressão digital confirmada.</p>
+        <form method="post" action="{{ url_for('botvendas.config_vps') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn btn-line btn-sm" name="acao" value="revogar_fp">Revogar confirmação</button>
+        </form>
+      {% else %}
+        <p>Compare com a impressão obtida diretamente na VPS antes de confirmar.</p>
+        <form method="post" class="form" action="{{ url_for('botvendas.config_vps') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <label>Digite novamente a impressão digital verificada
+            <input name="fingerprint" autocomplete="off" required>
+          </label>
+          <button class="btn btn-neon btn-sm" name="acao" value="confirmar_fp">Confirmar impressão digital</button>
+        </form>
+      {% endif %}
+    </div>
+    {% endif %}
+    <p class="foot-note">Último teste: {{ cfg['vps_last_test'] or 'nunca' }} —
+       {{ 'OK ✔' if cfg['vps_ok'] else 'pendente/falha' }}</p>
+  </div>
+</section>
+{% endblock %}

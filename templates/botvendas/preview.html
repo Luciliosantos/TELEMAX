@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Prévia — Editor do Bot{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/botvendas.css') }}">
+<section class="sec">
+  <h2 class="sec-h">👁️ Prévia do bot</h2>
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('botvendas.editor') }}">← Voltar ao editor</a>
+  {% for key, menu in layout.menus.items() %}
+  <div class="tgphone">
+    <div class="tghead">🤖 {{ '@' ~ '' }}SeuBot</div>
+    <div class="tgmsg">{{ menu.text }}</div>
+    <div class="tgkb">
+      {% for row in menu.rows %}<div class="tgrow">
+        {% for b in row %}<span class="tgk">{{ b.text }}</span>{% endfor %}
+      </div>{% else %}<div class="tgrow"><span class="tgk tgkoff">(sem botões)</span></div>{% endfor %}
+      {% if key == 'main' %}<div class="tgrow"><span class="tgk tgkadm">⚙️ ADMINISTRAÇÃO</span></div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

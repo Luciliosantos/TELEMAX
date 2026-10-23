@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Pagamento — {{ site_name }}{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<div class="pay-wrap">
+<h1>Pagamento do destaque</h1>
+<div class="pay-box">
+  <p class="pay-target">{{ pay.plan_name }} ({{ pay.days }} {{ 'dia' if pay.days==1 else 'dias' }}) · {{ pay.group_name }}</p>
+  <p class="pay-amount">{{ pay.amount_cents|cents }}</p>
+  {% if pay.status == 'paid' %}
+    <div class="flash ok">Pagamento confirmado! Destaque <b>ativo até {{ promo.ends_at[:10]|datebr if promo else '-' }}</b>.</div>
+  {% elif pay.status == 'pending' %}
+    {% if pay.pix_qr_b64 %}<img class="qr" src="data:image/png;base64,{{ pay.pix_qr_b64 }}" alt="QR Code Pix">{% endif %}
+    <p class="foot-note">Escaneie o QR Code ou copie o código Pix. A validade é de 60 minutos.</p>
+    <div class="pix-copy"><textarea id="pixCode" readonly rows="4">{{ pay.pix_code }}</textarea>
+      <button class="btn btn-neon" type="button" data-copy="#pixCode">Copiar código Pix</button></div>
+    {% if config.get('PIX_PROVIDER') == 'demo' %}
+    <div class="flash erro">AMBIENTE DE DEMONSTRAÇÃO: este Pix usa uma chave fictícia e não move dinheiro de verdade.</div>
+    <form method="post" action="{{ url_for('pix.simulate_payment', pay_id=pay.id) }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-line" type="submit">[SANDBOX] Confirmar pagamento para teste</button>
+    </form>
+    {% endif %}
+    <p class="foot-note">O destaque é ativado automaticamente após a confirmação do gateway.</p>
+  {% else %}
+    <div class="flash erro">Cobrança {{ pay.status }}. {{ 'O prazo para pagamento expirou.' if pay.status=='expired' else '' }}</div>
+  {% endif %}
+</div>
+<a class="btn btn-line" href="{{ url_for('user.promotions_page') }}">Voltar</a>
+</div>
+{% endblock %}

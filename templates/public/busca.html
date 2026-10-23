@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import group_card, pagination with context %}
+{% block title %}Busca: {{ q or 'todos' }} — {{ site_name }}{% endblock %}
+{% block robots %}{% if page > 1 %}noindex,follow{% else %}index,follow{% endif %}{% endblock %}
+{% block content %}
+<h1>Resultados {% if q %}para “{{ q }}”{% else %}da busca{% endif %}</h1>
+<form class="filter-bar" action="/busca" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar...">
+  <select name="tipo">
+    <option value="">Todos os tipos</option>
+    <option value="group" {{ 'selected' if tipo=='group' }}>Grupos</option>
+    <option value="channel" {{ 'selected' if tipo=='channel' }}>Canais</option>
+  </select>
+  <button class="btn btn-neon" type="submit">Filtrar</button>
+</form>
+<p class="result-info">{{ total }} {{ 'resultado' if total == 1 else 'resultados' }}</p>
+<div class="grid">
+  {% for g in rows %}{{ group_card(g, sponsored=(g.id in sponsored)) }}{% else %}<p class="empty">Nada encontrado. Tente outras palavras ou <a href="/">explore as categorias</a>.</p>{% endfor %}
+</div>
+{% set kwargs = {'q': q, 'tipo': tipo} %}
+{{ pagination(page, pages, 'public.search', **kwargs) }}
+{% endblock %}

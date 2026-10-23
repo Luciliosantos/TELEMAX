@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Bot Vendas VPN — TELEMAX{% endblock %}
+{% block content %}
+<section class="sec">
+  <h2 class="sec-h">🤖 Bot Vendas VPN <small class="spon-note">módulo por assinatura</small></h2>
+  <div class="prose">
+    <p>Transforme seu servidor em um negócio automatizado: seu próprio bot no Telegram
+    vende acessos VPN por Pix, cria contas SSH automaticamente na <b>sua VPS</b>, entrega
+    o aplicativo e o suporte — tudo gerenciado aqui no TELEMAX.</p>
+    <p>Cadastre-se ou entre na sua conta e contrate um dos planos abaixo para liberar o módulo.</p>
+  </div>
+  <div class="plans">
+    {% for p in planos %}
+    <div class="plan">
+      <h3>{{ p.name }}</h3>
+      <p class="plan-price">{{ p.price_cents|cents }}</p>
+      <p>{{ p.description }}</p>
+      <p class="foot-note">⏳ {{ p.days }} dias · até {{ p.max_vpn_plans }} planos VPN</p>
+      {% if p.features %}<p class="foot-note">{{ p.features }}</p>{% endif %}
+      <form method="post" action="{{ url_for('botvendas.contratar') }}">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="plan_id" value="{{ p.id }}">
+        <button class="btn btn-neon btn-block" type="submit">Contratar</button>
+      </form>
+    </div>
+    {% else %}<p class="empty">Nenhum plano do módulo disponível no momento.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

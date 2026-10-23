@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Pagamentos do módulo{% endblock %}
+{% block content %}
+<section class="sec">
+  <h2 class="sec-h">Pagamentos de assinatura do módulo</h2>
+  {% if pags %}
+  <div class="tb-wrap"><table class="tbl">
+    <tr><th>#</th><th>Conta</th><th>Valor</th><th>Status</th><th>Gateway ref</th><th>Data</th><th>Pago em</th></tr>
+    {% for p in pags %}
+    <tr><td>{{ p['id'] }}</td><td>{{ p['email'] or '-' }}</td><td>{{ p['amount_cents']|cents }}</td>
+        <td>{{ p['status'] }}</td><td>{{ p['provider_ref'] or '-' }}</td>
+        <td>{{ p['created_at'][:16] }}</td><td>{{ p['paid_at'][:16] if p['paid_at'] else '-' }}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">Nenhum pagamento do módulo.</p>{% endif %}
+</section>
+{% endblock %}

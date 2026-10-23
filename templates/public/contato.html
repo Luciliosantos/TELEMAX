@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Contato{% endblock %}
+{% block content %}
+<div class="prose">
+<h1>Fale com o TELEMAX</h1>
+{% if sent %}<div class="flash ok">Mensagem enviada! Responderemos no e-mail informado.</div>{% endif %}
+<form method="post" class="form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <label>Nome <input name="name" required maxlength="100"></label>
+  <label>E-mail <input type="email" name="email" required maxlength="200"></label>
+  <label>Mensagem <textarea name="message" required maxlength="3000" rows="6"></textarea></label>
+  <button class="btn btn-neon" type="submit">Enviar mensagem</button>
+</form>
+</div>
+{% endblock %}

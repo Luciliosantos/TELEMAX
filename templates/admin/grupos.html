@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_f with context %}
+{% block title %}Moderação — Admin{% endblock %}
+{% block robots %}noindex,nofollow{% endblock %}
+{% block content %}
+<h1>Moderação de publicações</h1>
+<div class="panel-nav">
+  {% for s in ['pending','approved','rejected','removed'] %}
+  <a class="btn {{ 'btn-neon' if st==s else 'btn-line' }}" href="{{ url_for('admin.groups_admin', status=s) }}">{{ {'pending':'Pendentes','approved':'Aprovadas','rejected':'Rejeitadas','removed':'Removidas'}[s] }}</a>
+  {% endfor %}
+</div>
+{% for r in rows %}
+<div class="mod-card">
+  <div><b>{{ r.name }}</b> <span class="chip chip-{{ r.type }}">{{ 'Canal' if r.type=='channel' else 'Grupo' }}</span>
+    {% if r.is_demo %}<span class="badge badge-demo">DEMO</span>{% endif %}</div>
+  <p>{{ r.description }}</p>
+  <p class="foot-note">Link: {{ r.link }} · Categoria: {{ r.category_name or '-' }} · Autor: {{ r.owner or 'admin' }}</p>
+  {% if r.rejection_reason %}<p class="flash erro">Motivo da rejeição: {{ r.rejection_reason }}</p>{% endif %}
+  <form method="post" class="inline-form" action="{{ url_for('admin.moderate', gid=r.id) }}">
+    {{ csrf_f() }}
+    {% if st != 'approved' %}
+    <button class="btn btn-neon btn-sm" name="acao" value="aprovar">Aprovar</button>
+    <button class="btn btn-line btn-sm" name="acao" value="rejeitar" onclick="return confirm('Rejeitar publicação?')">Rejeitar</button>
+    {% endif %}
+    <button class="btn btn-line btn-sm" name="acao" value="remover" onclick="return confirm('Remover publicação?')">Remover</button>
+    <input name="motivo" placeholder="Motivo (rejeição)" maxlength="300">
+    <details><summary class="btn btn-line btn-sm">Editar</summary>
+      <input name="name" value="{{ r.name }}" maxlength="100">
+      <textarea name="description" maxlength="500" rows="3">{{ r.description }}</textarea>
+      <input name="link" value="{{ r.link }}">
+      <input name="keywords" value="{{ r.keywords }}" placeholder="palavras-chave">
+      <button class="btn btn-neon btn-sm" name="acao" value="editar">Salvar edição</button>
+    </details>
+  </form>
+</div>
+{% else %}<p class="empty">Nenhuma publicação com este status.</p>{% endfor %}
+{% if pages > 1 %}<p class="pager-info">Página {{ page }} de {{ pages }}
+ {% if page > 1 %}<a class="btn btn-line btn-sm" href="{{ url_for('admin.groups_admin', status=st, page=page-1) }}">←</a>{% endif %}
+ {% if page < pages %}<a class="btn btn-line btn-sm" href="{{ url_for('admin.groups_admin', status=st, page=page+1) }}">→</a>{% endif %}</p>{% endif %}
+{% endblock %}
