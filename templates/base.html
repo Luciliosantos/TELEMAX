@@ -9,6 +9,7 @@
 <link rel="canonical" href="{% block canonical %}{{ request.base_url }}{% endblock %}">
 <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}" type="image/svg+xml">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20261021carousel1">
+{% block head_extra %}{% endblock %}
 </head>
 <body>
 <header class="topbar">

@@ -385,6 +385,8 @@ def user_action(uid):
         return redirect(url_for("admin.users_admin"))
     if acao == "desativar":
         execute("UPDATE users SET is_active=0 WHERE id=?", (uid,))
+        from .botvendas import botruntime
+        botruntime.parar_bot(uid)
         execute("UPDATE user_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL", (now(), uid))
     elif acao == "ativar":
         execute("UPDATE users SET is_active=1, failed_logins=0, locked_until=NULL WHERE id=?", (uid,))

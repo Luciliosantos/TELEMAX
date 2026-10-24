@@ -9,6 +9,7 @@ administração e verificação do proprietário) reinterpretadas no TELEMAX:
 Proteções que o layout visual NÃO desativa: botão de administração (injetado
 para o dono), verificação de pagamento por consulta na API e limite de teste.
 """
+import hashlib
 import json
 import threading
 from datetime import datetime, timedelta, timezone
@@ -110,6 +111,22 @@ class BotProcess:
         if t - self._last_expire > 300:              # a cada ~5 min
             self._last_expire = t
             try:
+                from .helpers import assinatura_ativa
+                if not assinatura_ativa(self.user_id):
+                    execute(
+                        "UPDATE bv_client_config SET bot_status='stopped', "
+                        "bot_error='', updated_at=? WHERE user_id=?",
+                        (now(), self.user_id)
+                    )
+                    bv_audit(self.user_id, "bot_stopped_subscription_expired")
+                    self.stop.set()
+                    return
+            except Exception as e:
+                current_app.logger.warning(
+                    "verificar assinatura do bot %s: %s", self.user_id, e
+                )
+                return
+            try:
                 from .helpers import expirar_contas_vencidas
                 expirar_contas_vencidas(self.user_id)
             except Exception as e:
@@ -181,6 +198,33 @@ class BotProcess:
         msg_id = cb["message"]["message_id"]
         de = str(cb["from"]["id"])
         dados = (cb.get("data") or "")[:64]
+        if dados.startswith("x:"):
+            identificador = dados[2:]
+            acao_original = None
+            menus = (self._layout().get("menus") or {})
+            for menu in menus.values():
+                for row in menu.get("rows") or []:
+                    for btn in row:
+                        candidata = (btn.get("action") or "msg:")
+                        precisa_id = (
+                            candidata.startswith("msg:")
+                            or len(candidata.encode("utf-8")) > 64
+                        )
+                        if precisa_id and hashlib.sha256(
+                            candidata.encode("utf-8")
+                        ).hexdigest()[:20] == identificador:
+                            acao_original = candidata
+                            break
+                    if acao_original is not None:
+                        break
+                if acao_original is not None:
+                    break
+            if acao_original is None:
+                telegramapi.answer_callback(
+                    self.token, cb["id"], "Botão desatualizado. Abra o menu novamente."
+                )
+                return
+            dados = acao_original
         cfg = self._cfg()
         dono = (cfg["owner_tg_id"] or "")
         eh_dono = bool(dono) and de == dono         # sem dono vinculado = ninguém é admin
@@ -208,6 +252,9 @@ class BotProcess:
         elif tipo == "apk":
             telegramapi.answer_callback(self.token, cb["id"])
             self._enviar_apk(chat)
+        elif tipo == "msg" and arg:
+            telegramapi.answer_callback(self.token, cb["id"])
+            telegramapi.send_message(self.token, chat, arg)
         elif tipo == "support":
             telegramapi.answer_callback(self.token, cb["id"])
             layout = self._layout()
@@ -246,7 +293,13 @@ class BotProcess:
                     if url.startswith(("http://", "https://")):
                         linha.append({"text": texto, "url": url})
                 else:
-                    linha.append({"text": texto, "callback_data": acao[:64]})
+                    if acao.startswith("msg:") or len(acao.encode("utf-8")) > 64:
+                        callback_text = "x:" + hashlib.sha256(
+                            acao.encode("utf-8")
+                        ).hexdigest()[:20]
+                    else:
+                        callback_text = acao
+                    linha.append({"text": texto, "callback_data": callback_text})
             if linha:
                 kb.append(linha)
         if cfg["owner_tg_id"] and de == cfg["owner_tg_id"]:
@@ -285,24 +338,30 @@ class BotProcess:
                      (plan_id, self.user_id), one=True)
 
     def _gerar_teste(self, chat, de, nome):
-        plano = query("SELECT * FROM bv_vpn_plans WHERE user_id=? AND is_test=1 "
-                      "AND is_active=1 ORDER BY sort LIMIT 1", (self.user_id,), one=True)
-        if not plano:
-            telegramapi.send_message(self.token, chat,
-                "❌ Testes indisponíveis no momento.")
+        cfg = self._cfg()
+        if not cfg or not cfg["test_enabled"]:
+            telegramapi.send_message(
+                self.token, chat, "❌ Testes grátis desativados no momento."
+            )
             return
+
         hoje = now()[:10]
-        ja = query("SELECT 1 FROM bv_sales WHERE user_id=? AND buyer_tg_id=? AND "
-                   "kind='test' AND substr(created_at,1,10)=?",
-                   (self.user_id, de, hoje), one=True)
+        ja = query(
+            "SELECT 1 FROM bv_sales WHERE user_id=? AND buyer_tg_id=? "
+            "AND kind='test' AND substr(created_at,1,10)=?",
+            (self.user_id, de, hoje), one=True
+        )
         if ja:
-            telegramapi.send_message(self.token, chat,
-                "Você já criou um teste hoje. Volte amanhã! ⏳")
+            telegramapi.send_message(
+                self.token, chat,
+                "Você já criou um teste hoje. Volte amanhã! ⏳"
+            )
             return
-        horas = int(plano["test_hours"] or 2)
-        self._criar_e_entregar(chat, de, nome, plano, kind="test",
-                               dias=max(1, round(horas / 24)),
-                               horas=horas)
+
+        horas = max(1, min(24, int(cfg["test_duration_hours"] or 2)))
+        self._criar_e_entregar(
+            chat, de, nome, None, kind="test", dias=1, horas=horas
+        )
 
     def _comprar(self, chat, de, plan_id, nome):
         plano = self._vpn_plano(plan_id)
@@ -317,6 +376,12 @@ class BotProcess:
         res = criar_pix(self.user_id, sale_id, plano["price_cents"],
                         f"ACESSO VPN {plano['name']} - {plano['days']} dias")
         if not res.get("ok"):
+            erro_pix = str(res.get("erro") or "Motivo não informado")
+            import logging
+            logging.getLogger(__name__).error(
+                "Falha ao gerar Pix: sale_id=%s motivo=%s",
+                sale_id, erro_pix
+            )
             execute("UPDATE bv_sales SET status='failed', updated_at=? WHERE id=?",
                     (now(), sale_id))
             telegramapi.send_message(self.token, chat,
@@ -421,7 +486,7 @@ class BotProcess:
         telegramapi.send_message(
             self.token, int(sale["buyer_tg_id"]),
             f"✅ <b>Acesso criado com sucesso</b> ✅\n\n"
-            f"SERVIDOR: {cfg['vps_host']}\nUSUARIO: <code>{usuario}</code>\n"
+            f"SERVIDOR: VPN BR\nUSUARIO: <code>{usuario}</code>\n"
             f"SENHA: <code>{senha}</code>\n⏳ Expira em {dias} dias")
         bv_audit(self.user_id, "sale_delivered", f"sale={sale_id}")
 
@@ -463,7 +528,8 @@ class BotProcess:
                 "INSERT INTO bv_sales(user_id, vpn_plan_id, buyer_tg_id, buyer_name, "
                 "kind, status, test_day, created_at, updated_at) "
                 "VALUES (?,?,?,?,'test','provisioning',?,?,?)",
-                (self.user_id, plano["id"], de, nome[:120], now()[:10], now(), now()))
+                (self.user_id, plano["id"] if plano else None,
+                 de, nome[:120], now()[:10], now(), now()))
         except sqlite3.IntegrityError:
             telegramapi.send_message(self.token, chat,
                 "Você já criou um teste hoje. Volte amanhã! ⏳")
@@ -486,7 +552,7 @@ class BotProcess:
             return
         telegramapi.send_message(
             self.token, chat,
-            f"✅ <b>Teste criado</b> ✅\n\nSERVIDOR: {cfg['vps_host']}\n"
+            f"✅ <b>Teste criado</b> ✅\n\nSERVIDOR: VPN BR\n"
             f"USUARIO: <code>{usuario}</code>\nSENHA: <code>{senha}</code>\n"
             f"⏳ Expira em {horas} hora(s)")
 
@@ -494,6 +560,12 @@ class BotProcess:
 # ---------------- API do registry (painel + boot) ----------------
 def publicar_bot(app, user_id):
     """Publica: valida requisitos e sobe a thread do bot."""
+    usuario = query("SELECT is_active FROM users WHERE id=?", (user_id,), one=True)
+    if not usuario or not usuario["is_active"]:
+        return dict(ok=False, erro="Conta desativada. O bot não pode ser iniciado.")
+    from .helpers import assinatura_ativa
+    if not assinatura_ativa(user_id):
+        return dict(ok=False, erro="Assinatura vencida ou inativa. Renove a assinatura para iniciar o bot.")
     cfg = config_do_cliente(user_id)
     token = crypto.dec(cfg["bot_token_enc"])
     problemas = []
@@ -512,13 +584,17 @@ def publicar_bot(app, user_id):
     with _registry_lock:
         if user_id in REGISTRY:
             return dict(ok=False, erro="Bot já está em execução")
-    info = telegramapi.get_me(token)
-    bp = BotProcess(app, user_id, token, cfg["tg_offset"] or 0)
-    execute("UPDATE bv_client_config SET bot_status='running', bot_error='', "
-            "bot_username=?, updated_at=? WHERE user_id=?",
-            (info.get("username", ""), now(), user_id))
-    REGISTRY[user_id] = bp
-    bp.start()
+        info = telegramapi.get_me(token)
+        bp = BotProcess(app, user_id, token, cfg["tg_offset"] or 0)
+        execute("UPDATE bv_client_config SET bot_status='running', bot_error='', "
+                "bot_username=?, updated_at=? WHERE user_id=?",
+                (info.get("username", ""), now(), user_id))
+        REGISTRY[user_id] = bp
+        try:
+            bp.start()
+        except Exception:
+            REGISTRY.pop(user_id, None)
+            raise
     bv_audit(user_id, "bot_published")
     return dict(ok=True)
 
@@ -544,7 +620,11 @@ def retomar_todos(app):
         return
     from .helpers import assinatura_ativa
     with app.app_context():
-        for cfg in query("SELECT * FROM bv_client_config WHERE bot_status='running'"):
+        for cfg in query(
+            "SELECT c.* FROM bv_client_config c "
+            "JOIN users u ON u.id=c.user_id "
+            "WHERE c.bot_status='running' AND u.is_active=1"
+        ):
             if assinatura_ativa(cfg["user_id"]) and crypto.dec(cfg["bot_token_enc"]):
                 try:
                     publicar_bot(app, cfg["user_id"])

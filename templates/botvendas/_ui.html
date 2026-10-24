@@ -1,0 +1,61 @@
+{# Componentes compartilhados do módulo BOT VENDAS #}
+
+{% macro badge(texto, nivel='info') -%}
+<span class="bv-badge {{ nivel }}">{{ texto }}</span>
+{%- endmacro %}
+
+{# Nome legível da ação de um botão do Telegram #}
+{% macro rotulo_acao(a, vpn) -%}
+  {%- if a == 'test' -%}Gerar teste grátis
+  {%- elif a == 'apk' -%}Baixar aplicativo
+  {%- elif a == 'support' -%}Suporte
+  {%- elif a.startswith('buy:') -%}
+    {%- set ns = namespace(nome=none) -%}
+    {%- for v in vpn -%}{%- if v['id']|string == a[4:] -%}{%- set ns.nome = v['name'] -%}{%- endif -%}{%- endfor -%}
+    {%- if ns.nome %}Comprar: {{ ns.nome }}{% else %}Comprar: plano #{{ a[4:] }} (indisponível){% endif -%}
+  {%- elif a.startswith('menu:') -%}Abre o menu {{ a[5:] }}
+  {%- elif a.startswith('link:') -%}Abre o link {{ a[5:][:60] }}
+  {%- elif a.startswith('msg:') -%}Envia uma mensagem ao cliente
+  {%- else -%}Ação não reconhecida
+  {%- endif -%}
+{%- endmacro %}
+
+{# Campos de ação: mostra só os campos do tipo escolhido (JS em bv_acao.js) #}
+{% macro campos_acao(prefixo, sel, url, msg, vpn, menus, menu_atual, token) -%}
+{% set ns = namespace(existe=false) %}
+{% for v in vpn %}{% if ('buy:' ~ v['id']) == sel %}{% set ns.existe = true %}{% endif %}{% endfor %}
+{% for k in menus %}{% if ('menu:' ~ k) == sel %}{% set ns.existe = true %}{% endif %}{% endfor %}
+<label>Ação do botão
+  <select name="action" data-acao-select id="{{ prefixo }}-acao">
+    <optgroup label="Vendas">
+      {% for v in vpn %}<option value="buy:{{ v['id'] }}" {{ 'selected' if sel == 'buy:' ~ v['id'] }}>Comprar: {{ v['name'] }}</option>{% endfor %}
+    </optgroup>
+    <optgroup label="Teste e aplicativo">
+      <option value="test" {{ 'selected' if sel == 'test' }}>Gerar teste grátis</option>
+      <option value="apk" {{ 'selected' if sel == 'apk' }}>Baixar aplicativo</option>
+      <option value="support" {{ 'selected' if sel == 'support' }}>Suporte</option>
+    </optgroup>
+    <optgroup label="Navegação">
+      {% for k in menus if k != menu_atual %}<option value="menu:{{ k }}" {{ 'selected' if sel == 'menu:' ~ k }}>Abrir o menu {{ k }}</option>{% endfor %}
+    </optgroup>
+    <optgroup label="Avançado">
+      <option value="link" {{ 'selected' if sel == 'link' }}>Abrir um link (site ou Telegram)</option>
+      <option value="msg" {{ 'selected' if sel == 'msg' }}>Enviar uma mensagem</option>
+    </optgroup>
+    {% if sel and sel.startswith(('buy:', 'menu:')) and not ns.existe %}
+      <option value="{{ sel }}" selected>{{ 'Ação atual (indisponível): ' ~ sel }}</option>
+    {% endif %}
+  </select>
+</label>
+<div data-campo="link" hidden>
+  <label>Endereço do link (https://)
+    <input name="url" type="url" maxlength="500" placeholder="https://exemplo.com" value="{{ url or '' }}" data-obrigatorio>
+    <span class="bv-field-help">Abre no navegador do cliente ao tocar no botão.</span>
+  </label>
+</div>
+<div data-campo="msg" hidden>
+  <label>Mensagem enviada ao cliente
+    <textarea name="message" rows="3" maxlength="3500" placeholder="Digite a mensagem" data-obrigatorio>{{ msg or '' }}</textarea>
+  </label>
+</div>
+{%- endmacro %}

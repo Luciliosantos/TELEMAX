@@ -1,126 +1,161 @@
 {% extends "base.html" %}
-{% block title %}Editor do Bot — Bot Vendas
-{% endblock %}
+{% from "botvendas/_ui.html" import badge, rotulo_acao, campos_acao %}
+{% block title %}Editor de botões — BOT VENDAS{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/botvendas.css') }}">{% endblock %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/botvendas.css') }}">
-<section class="sec">
-  <h2 class="sec-h">🤖 Central do Bot</h2>
-{% include "botvendas/partials/_tabs.html" %}
-  <div class="cta-actions" style="margin:10px 0">
-    <a class="btn btn-line btn-sm" href="{{ url_for('botvendas.editor_preview') }}">👁️ Prévia</a>
-    <form method="post" action="{{ url_for('botvendas.editor_validar') }}">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <button class="btn btn-line btn-sm">✔️ Validar</button>
-    </form>
-    <form method="post" action="{{ url_for('botvendas.editor_publicar') }}">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <button class="btn btn-neon btn-sm">🚀 Publicar no bot</button>
-    </form>
-    <form method="post" action="{{ url_for('botvendas.editor_menu_novo') }}">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <button class="btn btn-line btn-sm">➕ Novo submenu</button>
-    </form>
-  </div>
+<section class="bv">
+  <div class="bv-crumb"><a href="{{ url_for('botvendas.panel') }}">BOT VENDAS</a> / Editor de botões</div>
+  <header class="bv-head">
+    <div class="bv-head-txt">
+      <h2 class="bv-title">🎨 Editor de botões do bot</h2>
+      <p class="bv-sub">Monte os menus e os botões que o cliente vê no Telegram. As alterações ficam
+        em rascunho até você publicar. Publicar só acontece se todos os botões estiverem válidos.</p>
+    </div>
+    <div class="bv-head-actions">
+      <a class="btn btn-line" href="{{ url_for('botvendas.editor_preview') }}">👁️ Prévia</a>
+      <form method="post" action="{{ url_for('botvendas.editor_validar') }}" data-async>
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-line" data-loading="Validando…">✔️ Validar rascunho</button>
+      </form>
+      <form method="post" action="{{ url_for('botvendas.editor_publicar') }}" data-async>
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-neon btn-lg" data-loading="Publicando…">🚀 Publicar no bot</button>
+      </form>
+    </div>
+  </header>
 
-  <div class="mod-card">
-    <h3>Mensagens</h3>
-    <form method="post" class="form" action="{{ url_for('botvendas.editor_texto') }}">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <input type="hidden" name="campo" value="welcome">
-      <label>Boas-vindas (/start)<textarea name="valor" rows="2">{{ layout.welcome }}</textarea></label>
-      <button class="btn btn-neon btn-sm">Salvar boas-vindas</button>
-    </form>
-    <form method="post" class="form" action="{{ url_for('botvendas.editor_texto') }}">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <input type="hidden" name="campo" value="support">
-      <label>Suporte<textarea name="valor" rows="2">{{ layout.support }}</textarea></label>
-      <button class="btn btn-neon btn-sm">Salvar suporte</button>
-    </form>
+  {% if not vpn %}
+  <div class="bv-card" style="border-color:#ffb02e66">
+    <p class="bv-muted">⚠️ Você ainda não tem planos de venda ativos. Crie um em
+      <a href="{{ url_for('botvendas.vpn_planos') }}">Planos VPN</a> para adicionar o botão
+      <b>Comprar</b>.</p>
+  </div>
+  {% endif %}
+
+  <div class="bv-card">
+    <div class="bv-card-h">
+      <div class="bv-card-h-txt">
+        <span class="bv-ico">💬</span>
+        <div><h3>Textos do bot</h3><p>Mensagens enviadas com o comando /start e no botão de suporte.</p></div>
+      </div>
+    </div>
+    <div class="bv-grid">
+      <form method="post" class="form full" action="{{ url_for('botvendas.editor_texto') }}" data-async>
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="campo" value="welcome">
+        <label>Boas-vindas (/start)<textarea name="valor" rows="2">{{ layout.welcome }}</textarea></label>
+        <div class="bv-actions end"><button class="btn btn-line btn-sm" data-loading="Salvando…">Salvar boas-vindas</button></div>
+      </form>
+      <form method="post" class="form full" action="{{ url_for('botvendas.editor_texto') }}" data-async>
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="campo" value="support">
+        <label>Mensagem de suporte<textarea name="valor" rows="2">{{ layout.support }}</textarea></label>
+        <div class="bv-actions end"><button class="btn btn-line btn-sm" data-loading="Salvando…">Salvar suporte</button></div>
+      </form>
+    </div>
   </div>
 
   {% for key, menu in layout.menus.items() %}
-  <div class="mod-card">
-    <h3>Menu: {{ key }} {{ '(principal)' if key=='main' else '' }}</h3>
-    {% if key != 'main' %}
-    <form method="post" class="form"
-          action="{{ url_for('botvendas.editor_menu_remover', key=key) }}"
-          onsubmit="return confirm('Tem certeza que deseja excluir este submenu?');">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-line btn-sm">🗑️ Excluir submenu</button>
-    </form>
-    {% endif %}
-
-    <form method="post" class="form" action="{{ url_for('botvendas.editor_menu_texto', key=key) }}">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <label>Texto do menu<textarea name="valor" rows="2">{{ menu.text }}</textarea></label>
-      <button class="btn btn-line btn-sm">Salvar texto</button>
-    </form>
-    <p class="foot-note">Botões (em ordem):</p>
-    {% for row in menu.rows %}{% set rid = loop.index0 %}{% for b in row %}{% set bid = loop.index0 %}
-    <div class="row-line">
-      <div><span class="tgbtn">{{ b.text }}</span><br>
-        <small class="foot-note">ação: <code>{{ b.action }}</code></small></div>
-      <div class="inline-form">
-        <form method="post" action="{{ url_for('botvendas.editor_botao_acao', key=key, rid=rid, bid=bid) }}">
+  <div class="bv-card" id="menu-{{ key }}">
+    <div class="bv-card-h">
+      <div class="bv-card-h-txt">
+        <span class="bv-ico">{{ '📶' if key == 'main' else '🗂️' }}</span>
+        <div>
+          <h3>{{ 'Menu principal' if key == 'main' else 'Submenu: ' ~ key }}</h3>
+          <p>{{ menu.rows|length }} linha(s) de botões ·
+            o menu principal é o que abre com /start</p>
+        </div>
+      </div>
+      <div class="bv-head-actions">
+        {% if key == 'main' %}{{ badge('Principal', 'info') }}{% else %}
+        <form method="post" action="{{ url_for('botvendas.editor_menu_remover', key=key) }}"
+              onsubmit="return confirm('Excluir este submenu e os botões que o abrem?');">
           <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-          <button class="btn btn-line btn-sm" name="op" value="up">↑</button>
-          <button class="btn btn-line btn-sm" name="op" value="down">↓</button>
-          <button class="btn btn-line btn-sm" name="op" value="remove">🗑️</button>
-        </form>
+          <button class="btn btn-danger btn-sm">🗑️ Excluir submenu</button>
+        </form>{% endif %}
       </div>
     </div>
-    {% endfor %}{% endfor %}
-    <form method="post" class="form" action="{{ url_for('botvendas.editor_botao_novo', key=key) }}">
+
+    <form method="post" class="form" action="{{ url_for('botvendas.editor_menu_texto', key=key) }}" data-async>
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <label>Texto do botão (emoji livre)<input name="text" placeholder="💰 COMPRAR 🔐"></label>
-      <label>Ação
-        <select name="action" class="acao-botao">
-          <option value="test">gerar teste</option>
-          <option value="apk">enviar APK</option>
-          <option value="support">suporte</option>
-          {% for v in vpn %}<option value="buy:{{ v['id'] }}">comprar plano: {{ v['name'] }}</option>{% endfor %}
-          {% for k in layout.menus %}{% if k != key %}<option value="menu:{{ k }}">abrir menu {{ k }}</option>{% endif %}{% endfor %}
-          <option value="link">abrir link</option>
-          <option value="msg">enviar mensagem</option>
-        </select>
-      </label>
-      <label class="campo-link">Endereço do link
-        <input name="url" type="url" placeholder="https://exemplo.com">
-      </label>
-      <label class="campo-msg">Mensagem enviada ao cliente
-        <textarea name="message" rows="3" maxlength="3500" placeholder="Digite a mensagem"></textarea>
-      </label>
-      <button class="btn btn-neon btn-sm">➕ Adicionar botão</button>
+      <label>Texto da mensagem deste menu<textarea name="valor" rows="2">{{ menu.text }}</textarea></label>
+      <div class="bv-actions end"><button class="btn btn-line btn-sm" data-loading="Salvando…">Salvar texto</button></div>
     </form>
 
+    <hr class="bv-divider">
+    <h4 style="margin:0;color:#fff;font-size:.98rem">Botões deste menu</h4>
+
+    <div class="bv-btnlist">
+      {% for row in menu.rows %}{% set rid = loop.index0 %}{% for b in row %}{% set bid = loop.index0 %}
+      {% set sel = b.action.split(':')[0] if b.action.startswith(('link:', 'msg:')) else b.action %}
+      <div class="bv-btnrow">
+        <div class="bv-btnrow-main">
+          <div class="bv-btnrow-info">
+            <span class="bv-tg" title="{{ b.text }}">{{ b.text }}</span>
+            <span class="bv-tipo"><b>{{ rotulo_acao(b.action, vpn) }}</b></span>
+          </div>
+          <div class="bv-btnrow-acoes">
+            <form method="post" action="{{ url_for('botvendas.editor_botao_acao', key=key, rid=rid, bid=bid) }}">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <button class="btn btn-line btn-sm btn-icon" name="op" value="up" title="Mover para cima" aria-label="Mover para cima" {{ 'disabled' if rid == 0 }}>↑</button>
+            </form>
+            <form method="post" action="{{ url_for('botvendas.editor_botao_acao', key=key, rid=rid, bid=bid) }}">
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <button class="btn btn-line btn-sm btn-icon" name="op" value="down" title="Mover para baixo" aria-label="Mover para baixo" {{ 'disabled' if rid == menu.rows|length - 1 }}>↓</button>
+            </form>
+            <form method="post" action="{{ url_for('botvendas.editor_botao_acao', key=key, rid=rid, bid=bid) }}"
+                  onsubmit='return confirm({{ ("Remover o botão \"" ~ b.text ~ "\" deste menu?")|tojson }});'>
+              <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+              <button class="btn btn-danger btn-sm" name="op" value="remove">🗑️ Remover</button>
+            </form>
+          </div>
+        </div>
+        <details class="bv-edit">
+          <summary>✏️ Editar este botão</summary>
+          <form method="post" class="form" style="margin-top:10px"
+                action="{{ url_for('botvendas.editor_botao_acao', key=key, rid=rid, bid=bid) }}" data-async>
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <div class="bv-grid">
+              <label>Texto do botão<input name="text" maxlength="64" value="{{ b.text }}" required></label>
+              <div class="full bv-grid" style="gap:0 18px">
+                {{ campos_acao('edit-' ~ key ~ '-' ~ rid ~ '-' ~ bid, sel, b.action[5:] if b.action.startswith('link:') else '', b.action[4:] if b.action.startswith('msg:') else '', vpn, layout.menus.keys()|list, key, csrf_token()) }}
+              </div>
+            </div>
+            <div class="bv-actions end">
+              <button class="btn btn-neon btn-sm" name="op" value="edit" data-loading="Salvando…">Salvar alterações</button>
+            </div>
+          </form>
+        </details>
+      </div>
+      {% endfor %}{% endfor %}
+      {% if not menu.rows %}<div class="bv-empty">Este menu ainda não tem botões. Adicione o primeiro abaixo.</div>{% endif %}
+    </div>
+
+    <div class="bv-addbox">
+      <h4>➕ Adicionar botão</h4>
+      <form method="post" class="form" action="{{ url_for('botvendas.editor_botao_novo', key=key) }}" data-async>
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <div class="bv-grid">
+          <label>Texto do botão<input name="text" maxlength="64" placeholder="💰 COMPRAR 🔐" required>
+            <span class="bv-field-help">Aceita emoji.</span></label>
+          {{ campos_acao('novo-' ~ key, '', '', '', vpn, layout.menus.keys()|list, key, csrf_token()) }}
+        </div>
+        <div class="bv-actions end"><button class="btn btn-neon" data-loading="Adicionando…">➕ Adicionar botão</button></div>
+      </form>
+    </div>
   </div>
+  {% else %}
+  <div class="bv-empty">Nenhum menu encontrado.</div>
   {% endfor %}
-  <p class="foot-note">⚠️ O botão ⚙️ ADMINISTRAÇÃO é sempre injetado para o dono e não pode
-     ser removido pelo editor. A verificação de pagamento acontece sempre no servidor.</p>
+
+  <div class="bv-actions" style="margin-top:4px">
+    <form method="post" action="{{ url_for('botvendas.editor_menu_novo') }}" data-async>
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-line" data-loading="Criando…">🗂️ Criar novo submenu</button>
+    </form>
+  </div>
+  <p class="bv-hint">⚠️ O botão ⚙️ ADMINISTRAÇÃO é sempre adicionado para o dono e não pode ser removido pelo editor.
+    A verificação de pagamento acontece sempre no servidor.</p>
 </section>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  document.querySelectorAll('form[action*="/botao/novo"]').forEach(function (form) {
-    var acao = form.querySelector('select[name="action"]');
-    var link = form.querySelector(".campo-link");
-    var msg = form.querySelector(".campo-msg");
-
-    if (!acao || !link || !msg) return;
-
-    function atualizarCampos() {
-      link.style.display = acao.value === "link" ? "" : "none";
-      msg.style.display = acao.value === "msg" ? "" : "none";
-
-      var entradaLink = link.querySelector("input");
-      var entradaMsg = msg.querySelector("textarea");
-
-      entradaLink.required = acao.value === "link";
-      entradaMsg.required = acao.value === "msg";
-    }
-
-    acao.addEventListener("change", atualizarCampos);
-    atualizarCampos();
-  });
-});
-</script>
+<script src="{{ url_for('static', filename='js/bv_acao.js') }}"></script>
 {% endblock %}

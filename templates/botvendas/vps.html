@@ -1,58 +1,114 @@
 {% extends "base.html" %}
-{% block title %}Servidor/VPS — Bot Vendas{% endblock %}
+{% from "botvendas/_ui.html" import badge %}
+{% block title %}Servidor / VPS — BOT VENDAS{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ url_for('static', filename='css/botvendas.css', v='20261023-red1') }}">{% endblock %}
 {% block content %}
-<section class="sec">
-  <h2 class="sec-h">🖥️ Servidor / VPS</h2>
-{% include "botvendas/partials/_tabs.html" %}
-  <p class="foot-note">Conexão SSH usada pelo seu bot para criar, renovar e revogar
-  acessos VPN. Configuração individual: cada cliente usa a própria VPS.</p>
-  <div class="mod-card">
-    <h3>🖥️ VPS própria</h3>
-    <p class="foot-note">Chave pública para instalar na VPS (authorized_keys):</p>
-    <p class="foot-note mono" style="word-break:break-all">{{ cfg['vps_pubkey'] or 'gere uma chave abaixo' }}</p>
-    <form method="post" class="form" action="{{ url_for('botvendas.config_vps') }}">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      <label>IP / hostname<input name="vps_host" value="{{ cfg['vps_host'] or '' }}"></label>
-      <label>Porta SSH<input name="vps_port" value="{{ cfg['vps_port'] or 22 }}" style="max-width:120px"></label>
-      <label>Usuário SSH<input name="vps_user" value="{{ cfg['vps_user'] or 'botvendas' }}"></label>
-      <label class="inline"><input type="checkbox" name="vps_use_sudo" {{ 'checked' if cfg['vps_use_sudo'] }}>
-        usar <code>sudo -n</code> (usuário dedicado com privilégios mínimos)</label>
-      <div class="cta-actions">
-        <button class="btn btn-neon btn-sm" type="submit">Salvar VPS</button>
-        <button class="btn btn-line btn-sm" name="acao" value="gerarchave">Gerar nova chave SSH</button>
-      <label>Senha SSH inicial (usada somente nesta instalação)
-        <input type="password" name="vps_initial_password" autocomplete="off">
-      </label>
-        <button class="btn btn-line btn-sm" name="acao" value="capturar_fp">🔎 Capturar chave do servidor</button>
-        <button class="btn btn-line btn-sm" name="acao" value="instalar_chave">🔐 Instalar chave SSH automaticamente</button>
+<section class="bv">
+  <div class="bv-crumb"><a href="{{ url_for('botvendas.panel') }}">BOT VENDAS</a> / Servidor / VPS</div>
+  <header class="bv-head">
+    <div class="bv-head-txt">
+      <h2 class="bv-title">🖥️ Servidor / VPS</h2>
+      <p class="bv-sub">Conexão SSH que o bot usa para criar, renovar e revogar acessos dos clientes.
+        Informe a senha e confirme. Depois clique em <b>TESTAR CONEXÃO</b>: o TELEMAX valida o servidor,
+        instala a chave de acesso e confirma o login sozinho.</p>
+    </div>
+    <div class="bv-head-actions">
+      {% if cfg['vps_ok'] %}{{ badge('Conexão confirmada', 'ok') }}
+      {% elif cfg['vps_last_result'] %}{{ badge('Falha no último teste', 'err') }}
+      {% else %}{{ badge('Ainda não testada', 'off') }}{% endif %}
+    </div>
+  </header>
 
-        <button class="btn btn-line btn-sm" name="acao" value="testar">🧪 Testar conexão</button>
+  <!-- Dados da VPS e credenciais -->
+  <div class="bv-card">
+    <div class="bv-card-h">
+      <div class="bv-card-h-txt">
+        <span class="bv-ico">🔐</span>
+        <div><h3>Acesso à VPS</h3><p>Endereço, porta e usuário dedicado do bot.</p></div>
+      </div>
+    </div>
+
+    <form method="post" class="form" action="{{ url_for('botvendas.config_vps') }}" data-async>
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="bv-grid">
+        <label>IP ou hostname da VPS<input name="vps_host" value="{{ cfg['vps_host'] or '' }}" placeholder="203.0.113.10" autocomplete="off"></label>
+        <label>Porta SSH<input name="vps_port" inputmode="numeric" value="{{ cfg['vps_port'] or 22 }}" class="bv-w-sm"></label>
+        <label>Usuário SSH<input name="vps_user" value="{{ cfg['vps_user'] or 'botvendas' }}" autocomplete="off">
+          <span class="bv-field-help">Use um usuário dedicado, com o mínimo de privilégios.</span></label>
+        <label>Senha SSH
+          <input type="password" name="vps_password" autocomplete="new-password" placeholder="{{ 'Senha guardada (deixe em branco para reutilizar)' if cfg['vps_password_enc'] else 'Digite a senha SSH' }}">
+          <span class="bv-field-help">Guardada criptografada e apagada assim que a chave funcionar.</span></label>
+        <label class="check full"><input type="checkbox" name="vps_use_sudo" {{ 'checked' if cfg['vps_use_sudo'] }}>
+          Usar <code>sudo -n</code> para as operações de conta (recomendado)</label>
+      </div>
+      <div class="bv-actions">
+        <button class="btn btn-line" type="submit" name="acao" value="confirmar_senha" data-loading="Salvando…">CONFIRMAR SENHA</button>
+        <button class="btn btn-neon btn-lg btn-primary-slot" type="submit" name="acao" value="testar_conexao" data-loading="Testando conexão…">TESTAR CONEXÃO</button>
       </div>
     </form>
-    {% if cfg['vps_fingerprint'] %}
-    <div class="foot-note">
-      <p>Chave do servidor capturada ({{ cfg['vps_fp_type'] or 'SSH' }}):</p>
-      <p class="mono" style="word-break:break-all">{{ cfg['vps_fingerprint'] }}</p>
-      {% if cfg['vps_fp_confirmed_at'] %}
-        <p>Impressão digital confirmada.</p>
-        <form method="post" action="{{ url_for('botvendas.config_vps') }}">
-          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-          <button class="btn btn-line btn-sm" name="acao" value="revogar_fp">Revogar confirmação</button>
-        </form>
-      {% else %}
-        <p>Compare com a impressão obtida diretamente na VPS antes de confirmar.</p>
-        <form method="post" class="form" action="{{ url_for('botvendas.config_vps') }}">
-          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-          <label>Digite novamente a impressão digital verificada
-            <input name="fingerprint" autocomplete="off" required>
-          </label>
-          <button class="btn btn-neon btn-sm" name="acao" value="confirmar_fp">Confirmar impressão digital</button>
-        </form>
-      {% endif %}
-    </div>
-    {% endif %}
-    <p class="foot-note">Último teste: {{ cfg['vps_last_test'] or 'nunca' }} —
-       {{ 'OK ✔' if cfg['vps_ok'] else 'pendente/falha' }}</p>
   </div>
+
+  <!-- Estado da conexão -->
+  <div class="bv-card">
+    <div class="bv-card-h">
+      <div class="bv-card-h-txt">
+        <span class="bv-ico">📡</span>
+        <div><h3>Estado da conexão</h3><p>Última verificação feita pelo TELEMAX.</p></div>
+      </div>
+    </div>
+    <div class="bv-kv">
+      <div>
+        <small>Senha guardada</small>
+        <b>{{ 'Sim, criptografada' if cfg['vps_password_enc'] else 'Não' }}</b>
+      </div>
+      <div>
+        <small>Identidade do servidor</small>
+        <b class="bv-mono">{{ (cfg['vps_fp_type'] or 'SSH') ~ ' ' ~ cfg['vps_fingerprint'] if cfg['vps_fingerprint'] else 'Ainda não registrada' }}</b>
+      </div>
+      <div>
+        <small>Último teste</small>
+        <b>{{ cfg['vps_last_test'] or 'Nunca testada' }}</b>
+        <span class="bv-hint">{{ badge('Aprovado', 'ok') if cfg['vps_ok'] else badge('Pendente ou com falha', 'warn') }}</span>
+      </div>
+    </div>
+
+    {% if cfg['vps_last_result'] %}
+    <h4 style="margin:18px 0 10px;color:#fff;font-size:.95rem">Etapas do último teste</h4>
+    <ol class="bv-steps" style="list-style:none;padding:0">
+      {% for linha in cfg['vps_last_result'].split('\n') if linha.strip() %}
+        {% set partes = linha.split(' | ') %}
+        {% set ok = partes[0].strip() == 'OK' %}
+        <li class="bv-step {{ 'ok' if ok else 'err' }}">
+          <span class="ic">{{ '✓' if ok else '✕' }}</span>
+          <div class="bv-step-body">
+            <b>{{ partes[1] if partes|length > 1 else linha }}</b>
+            {% if partes|length > 2 %}<span>{{ partes[2:]|join(' | ') }}</span>{% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="bv-empty" style="margin-top:16px">Nenhum teste feito ainda. Preencha os dados acima e clique em TESTAR CONEXÃO.</div>
+    {% endif %}
+  </div>
+
+  <!-- Ações avançadas, separadas do fluxo normal -->
+  <details class="bv-card danger">
+    <summary style="cursor:pointer;font-weight:700;color:#ff8fa3">⚠️ Ações avançadas</summary>
+    <p class="bv-muted" style="margin:12px 0">Use somente se o servidor foi reinstalado ou se a chave precisa ser trocada.</p>
+    <div class="bv-actions" style="margin-top:0">
+      <form method="post" action="{{ url_for('botvendas.config_vps') }}" data-async
+            onsubmit="return confirm('Redefinir a identidade do servidor? O próximo teste vai registrar a nova impressão digital.');">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-danger" name="acao" value="revogar_fp">Redefinir identidade do servidor</button>
+      </form>
+      <form method="post" action="{{ url_for('botvendas.config_vps') }}" data-async
+            onsubmit="return confirm('Remover a chave SSH do bot? Será preciso testar a conexão de novo.');">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn btn-danger" name="acao" value="revogar_chave">Remover chave SSH</button>
+      </form>
+    </div>
+  </details>
 </section>
+<script src="{{ url_for('static', filename='js/bv_acao.js') }}"></script>
 {% endblock %}

@@ -11,7 +11,7 @@ from . import crypto, telegramapi
 from . import botruntime
 from .helpers import (bv_audit, config_do_cliente, expirar_assinaturas,
                       expirar_contas_vencidas)
-from .sshops import ErroSSH, RE_VPS_USER, RemoteVPS, SSHResult
+from .sshops import ErroSSH, RE_VPS_USER, RemoteVPS, SSHResult, testar_conexao_completo
 from .botruntime import _cfg_vps
 
 APK_MAX = 30 * 1024 * 1024
@@ -209,185 +209,142 @@ def config_bot():
     return redirect(url_for("botvendas.config_page"))
 
 
+def _gerar_par_chave():
+    """Par Ed25519 do CLIENTE (autenticação). Privada fica criptografada no banco."""
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives import serialization
+    chave = Ed25519PrivateKey.generate()
+    priv = chave.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.OpenSSH,
+                               serialization.NoEncryption()).decode()
+    pub = chave.public_key().public_bytes(serialization.Encoding.OpenSSH,
+                                          serialization.PublicFormat.OpenSSH).decode()
+    return priv, pub
+
+
+def _salvar_dados_vps(uid, cfg, form):
+    """Valida e grava IP/porta/usuário/sudo. Mudar o destino zera a identidade."""
+    host = (form.get("vps_host") or "").strip()[:190]
+    if not _host_valido(host):
+        flash("Endereço da VPS inválido (use IP ou domínio, sem espaços ou símbolos).", "erro")
+        return None
+    try:
+        port = int(form.get("vps_port") or 22)
+    except ValueError:
+        port = 0
+    if not (1 <= port <= 65535):
+        flash("Porta inválida (1 a 65535).", "erro")
+        return None
+    user = (form.get("vps_user") or "botvendas").strip()[:32]
+    if not RE_VPS_USER.match(user):
+        flash("Usuário SSH inválido (use a-z, 0-9, _ ou -).", "erro")
+        return None
+    use_sudo = 1 if form.get("vps_use_sudo") else 0
+    mudou = (host != (cfg["vps_host"] or "") or port != cfg["vps_port"]
+             or user != cfg["vps_user"])
+    execute("UPDATE bv_client_config SET vps_host=?, vps_port=?, vps_user=?, "
+            "vps_use_sudo=?, updated_at=? WHERE user_id=?",
+            (host, port, user, use_sudo, now(), uid))
+    if mudou:       # outro destino = outra identidade de servidor: zera a confiança
+        execute("UPDATE bv_client_config SET vps_fingerprint=NULL, vps_fp_type=NULL, "
+                "vps_fp_confirmed_at=NULL, vps_ok=0 WHERE user_id=?", (uid,))
+        botruntime.parar_bot(uid)
+        bv_audit(uid, "vps_target_changed")
+    return config_do_cliente(uid)
+
+
+def _testar_conexao(uid, cfg, senha_form):
+    """Botão TESTAR CONEXÃO: executa todas as etapas e grava o resultado."""
+    keydata = crypto.dec(cfg["vps_sshkey_enc"])
+    if not keydata or not cfg["vps_pubkey"]:
+        keydata, pub = _gerar_par_chave()
+        execute("UPDATE bv_client_config SET vps_sshkey_enc=?, vps_pubkey=?, vps_ok=0, "
+                "updated_at=? WHERE user_id=?", (crypto.enc(keydata), pub, now(), uid))
+        bv_audit(uid, "vps_key_generated")
+        cfg = config_do_cliente(uid)
+    senha = senha_form or crypto.dec(cfg["vps_password_enc"] or "")
+    res = testar_conexao_completo(dict(cfg, _key_data=keydata), senha=senha)
+    senha = ""                                   # descarta a senha da memória
+    if res.get("ok"):
+        # Confirma somente após o teste completo e a validação da fingerprint.
+        if res.get("fingerprint"):
+            execute("UPDATE bv_client_config SET vps_fingerprint=?, vps_fp_type=?, "
+                    "vps_fp_confirmed_at=?, updated_at=? WHERE user_id=?",
+                    (res["fingerprint"], res["tipo"], now(), now(), uid))
+            bv_audit(uid, "vps_fingerprint_registered", res["fingerprint"])
+        else:
+            execute("UPDATE bv_client_config SET vps_fp_confirmed_at=?, updated_at=? "
+                    "WHERE user_id=?",
+                    (now(), now(), uid))
+        cfg = config_do_cliente(uid)
+    if res["chave_instalada"]:
+        bv_audit(uid, "vps_key_installed")
+    ok = res["ok"]
+    falha = next((e for e in res["etapas"] if not e["ok"]), None)
+    resultado = "\n".join(("OK" if e["ok"] else "FALHA") + " | " + e["nome"] + " | " + e["msg"]
+                          for e in res["etapas"])
+    # a senha só é apagada depois que a chave funciona (ela não é mais necessária)
+    limpar_senha = ", vps_password_enc=NULL" if ok else ""
+    execute("UPDATE bv_client_config SET vps_ok=?, vps_last_test=?, vps_last_result=?, "
+            "updated_at=?" + limpar_senha + " WHERE user_id=?",
+            (1 if ok else 0, now(), resultado[:4000], now(), uid))
+    bv_audit(uid, "vps_test", "ok" if ok else "fail:" + (falha["nome"] if falha else "?"))
+    if ok:
+        flash("Conexão SSH confirmada: a VPS está pronta para criar contas.", "ok")
+    else:
+        flash("Falha em \"" + (falha["nome"] if falha else "conexão") + "\": "
+              + (falha["msg"] if falha else "erro desconhecido"), "erro")
+
+
 @bp.route("/config/vps", methods=["POST"])
 def config_vps():
     if not g.user:
         return redirect(url_for("auth.login"))
     _assinatura_ou_403()
-    cfg = config_do_cliente(g.user["id"])
     uid = g.user["id"]
     acao = request.form.get("acao", "salvar")
+    cfg = config_do_cliente(uid)
 
-    # ---- confirmar fingerprint (o dono comparou com ssh-keyscan na VPS) ----
-    if acao == "confirmar_fp":
-        digitado = (request.form.get("fingerprint") or "").strip()
-        pend = cfg["vps_fingerprint"] or ""
-        if not pend or digitado != pend:
-            flash("A impressão digital digitada não confere com a capturada. "
-                  "Nada foi confirmado.", "erro")
-        else:
-            execute("UPDATE bv_client_config SET vps_fp_confirmed_at=?, vps_ok=0, "
-                    "updated_at=? WHERE user_id=?", (now(), now(), uid))
-            bv_audit(uid, "vps_fingerprint_confirmed", pend)
-            flash("Impressão digital confirmada. Agora teste a conexão.", "ok")
-        return redirect(url_for("botvendas.vps_page"))
-
-    # ---- revogar confiança / credencial SSH ----
+    # ---- revogações (uso avançado) ----
     if acao == "revogar_fp":
         execute("UPDATE bv_client_config SET vps_fingerprint=NULL, vps_fp_type=NULL, "
                 "vps_fp_confirmed_at=NULL, vps_ok=0, updated_at=? WHERE user_id=?",
                 (now(), uid))
         botruntime.parar_bot(uid)
         bv_audit(uid, "vps_fingerprint_revoked")
-        flash("Confiança na VPS revogada e bot parado.", "ok")
+        flash("Identidade do servidor removida. O próximo TESTAR CONEXÃO registra de novo.", "ok")
         return redirect(url_for("botvendas.vps_page"))
     if acao == "revogar_chave":
         execute("UPDATE bv_client_config SET vps_sshkey_enc=NULL, vps_pubkey=NULL, "
-                "vps_ok=0, updated_at=? WHERE user_id=?", (now(), uid))
+                "vps_password_enc=NULL, vps_ok=0, updated_at=? WHERE user_id=?", (now(), uid))
         botruntime.parar_bot(uid)
         bv_audit(uid, "vps_key_revoked")
         flash("Chave SSH removida do TELEMAX e bot parado. Remova também a chave "
               "pública do authorized_keys da VPS.", "ok")
         return redirect(url_for("botvendas.vps_page"))
 
-    # ---- salvar host/porta/usuário (validados; mudar invalida a confiança) ----
-    host = (request.form.get("vps_host") or "").strip()[:190]
-    if not _host_valido(host):
-        flash("Endereço da VPS inválido (use IP ou domínio, sem espaços ou símbolos).",
-              "erro")
+    if acao not in ("salvar", "confirmar_senha", "testar_conexao"):
+        flash("Ação desconhecida.", "erro")
         return redirect(url_for("botvendas.vps_page"))
-    try:
-        port = int(request.form.get("vps_port") or 22)
-    except ValueError:
-        port = 0
-    if not (1 <= port <= 65535):
-        flash("Porta inválida (1 a 65535).", "erro")
+
+    cfg = _salvar_dados_vps(uid, cfg, request.form)
+    if cfg is None:
         return redirect(url_for("botvendas.vps_page"))
-    user = (request.form.get("vps_user") or "botvendas").strip()[:32]
-    if not RE_VPS_USER.match(user):
-        flash("Usuário SSH inválido (use a-z, 0-9, _ ou -).", "erro")
-        return redirect(url_for("botvendas.vps_page"))
-    use_sudo = 1 if request.form.get("vps_use_sudo") else 0
-    mudou = (host != (cfg["vps_host"] or "") or port != cfg["vps_port"]
-             or user != cfg["vps_user"])
-    execute("UPDATE bv_client_config SET vps_host=?, vps_port=?, vps_user=?, "
-            "vps_use_sudo=?, updated_at=? WHERE user_id=?",
-            (host, port, user, use_sudo, now(), uid))
-    if mudou:       # destino diferente = chave de servidor diferente: confiança zerada
-        execute("UPDATE bv_client_config SET vps_fingerprint=NULL, vps_fp_type=NULL, "
-                "vps_fp_confirmed_at=NULL, vps_ok=0 WHERE user_id=?", (uid,))
-        botruntime.parar_bot(uid)
-        bv_audit(uid, "vps_target_changed")
 
-    if acao == "gerarchave" or not crypto.dec(cfg["vps_sshkey_enc"]):
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        from cryptography.hazmat.primitives import serialization
-        chave = Ed25519PrivateKey.generate()
-        priv = chave.private_bytes(
-            serialization.Encoding.PEM, serialization.PrivateFormat.OpenSSH,
-            serialization.NoEncryption()).decode()
-        pub = chave.public_key().public_bytes(
-            serialization.Encoding.OpenSSH,
-            serialization.PublicFormat.OpenSSH).decode()
-        execute("UPDATE bv_client_config SET vps_sshkey_enc=?, vps_pubkey=?, "
-                "vps_ok=0, updated_at=? WHERE user_id=?",
-                (crypto.enc(priv), pub, now(), uid))
-        bv_audit(uid, "vps_key_generated")
-        flash("Nova chave SSH gerada. Instale a chave pública na VPS (veja o guia).", "ok")
-
-    # ---- instalação inicial da chave pública, sem guardar a senha ----
-    if acao == "instalar_chave" and host:
-        cfg = config_do_cliente(uid)
-        password = request.form.get("vps_initial_password") or ""
-        # Cadastro automático: captura a fingerprint sem enviar senha; depois
-        # a conexão autenticada só continua se a chave do host corresponder.
-        if not cfg["vps_fingerprint"]:
-            try:
-                capturador = RemoteVPS(dict(cfg, _key_data="", _fingerprint=""))
-                fp, tipo = capturador.capturar_fingerprint()
-            except ErroSSH as e:
-                flash(str(e), "erro")
-                return redirect(url_for("botvendas.vps_page"))
-            execute("UPDATE bv_client_config SET vps_fingerprint=?, vps_fp_type=?, "
-                    "vps_fp_confirmed_at=?, vps_ok=0, updated_at=? WHERE user_id=?",
-                    (fp, tipo, now(), now(), uid))
-            bv_audit(uid, "vps_fingerprint_auto_captured", fp)
-            cfg = config_do_cliente(uid)
-        elif not cfg["vps_fp_confirmed_at"]:
-            # Se já há uma fingerprint pendente, não a aprova silenciosamente.
-            flash("Há uma impressão digital pendente. Confira a identidade da VPS e confirme-a antes de instalar.", "erro")
-            return redirect(url_for("botvendas.vps_page"))
-        pubkey = cfg["vps_pubkey"] or ""
-        keydata = crypto.dec(cfg["vps_sshkey_enc"]) if cfg["vps_sshkey_enc"] else ""
-        if not keydata or not pubkey:
-            flash("Gere a chave SSH no painel antes de instalar.", "erro")
-            return redirect(url_for("botvendas.vps_page"))
-        try:
-            vps = RemoteVPS(dict(
-                cfg, _key_data=keydata,
-                _fingerprint=cfg["vps_fingerprint"]
-            ))
-            result = vps.instalar_chave_com_senha(password, pubkey)
-            if result.ok:
-                bv_audit(uid, "vps_key_installed")
-                # Confirma imediatamente que a chave recém-instalada funciona.
-                cfg2 = config_do_cliente(uid)
-                try:
-                    teste = RemoteVPS(_cfg_vps(cfg2)).conectividade()
-                except ErroSSH as e:
-                    teste = SSHResult(False, err=str(e))
-                if teste.ok and "TMOK" in teste.out:
-                    execute("UPDATE bv_client_config SET vps_ok=1, vps_last_test=?, updated_at=? WHERE user_id=?",
-                            (now(), now(), uid))
-                    flash("Chave SSH instalada e conexão por chave testada com sucesso.", "ok")
-                    bv_audit(uid, "vps_key_connection_verified")
-                else:
-                    execute("UPDATE bv_client_config SET vps_ok=0, vps_last_test=?, updated_at=? WHERE user_id=?",
-                            (now(), now(), uid))
-                    flash("A chave foi gravada, mas o teste por chave falhou: " + (teste.err or teste.out or "sem detalhes")[:220], "erro")
-            else:
-                flash("A instalação não foi confirmada. Confira o acesso inicial da VPS.", "erro")
-        except ErroSSH as e:
-            flash(str(e), "erro")
-        finally:
-            password = ""
-
-    # ---- capturar fingerprint (1º uso) — NÃO confia; só mostra para o dono ----
-    if acao == "capturar_fp" and host:
-        cfg = config_do_cliente(uid)
-        try:
-            vps = RemoteVPS(dict(cfg, _key_data=crypto.dec(cfg["vps_sshkey_enc"])))
-            fp, tipo = vps.capturar_fingerprint()
-        except ErroSSH as e:
-            flash(str(e), "erro")
-            return redirect(url_for("botvendas.vps_page"))
-        execute("UPDATE bv_client_config SET vps_fingerprint=?, vps_fp_type=?, "
-                "vps_fp_confirmed_at=NULL, vps_ok=0, updated_at=? WHERE user_id=?",
-                (fp, tipo, now(), uid))
-        bv_audit(uid, "vps_fingerprint_captured", fp)
-        flash("Impressão digital capturada. COMPARE com a da sua VPS e confirme "
-              "abaixo — sem confirmação, nada conecta.", "ok")
-
-    # ---- testar conexão (exige fingerprint confirmado) ----
-    if acao == "testar" and host:
-        cfg = config_do_cliente(uid)
-        if not cfg["vps_fp_confirmed_at"]:
-            flash("Confirme a impressão digital da VPS antes de testar.", "erro")
-            return redirect(url_for("botvendas.vps_page"))
-        keydata = crypto.dec(cfg["vps_sshkey_enc"])
-        if not keydata:
-            flash("Gere a chave SSH antes de testar.", "erro")
-            return redirect(url_for("botvendas.vps_page"))
-        try:
-            r = RemoteVPS(_cfg_vps(cfg)).conectividade()
-        except ErroSSH as e:
-            r = SSHResult(False, err=str(e))
-        ok = bool(r.ok and "TMOK" in r.out)
-        execute("UPDATE bv_client_config SET vps_ok=?, vps_last_test=?, updated_at=? "
-                "WHERE user_id=?", (1 if ok else 0, now(), now(), uid))
-        flash("VPS OK: conectividade confirmada." if ok
-              else "Falha na conexão: " + (r.err or r.out)[:300], "ok" if ok else "erro")
-        bv_audit(uid, "vps_test", "ok" if ok else "fail")
+    if acao == "salvar":
+        flash("Dados da VPS salvos.", "ok")
+    elif acao == "confirmar_senha":
+        senha = request.form.get("vps_password") or ""
+        if not senha or len(senha) > 200:
+            flash("Informe a senha SSH da VPS (até 200 caracteres).", "erro")
+        else:
+            execute("UPDATE bv_client_config SET vps_password_enc=?, vps_ok=0, "
+                    "updated_at=? WHERE user_id=?", (crypto.enc(senha), now(), uid))
+            senha = ""
+            bv_audit(uid, "vps_password_saved")
+            flash("Senha SSH guardada de forma criptografada. Agora clique em TESTAR CONEXÃO.",
+                  "ok")
+    elif acao == "testar_conexao":
+        _testar_conexao(uid, cfg, request.form.get("vps_password") or "")
     return redirect(url_for("botvendas.vps_page"))
 
 
@@ -498,7 +455,7 @@ def vpn_plano_salvar():
         abort(403)
     sub = _assinatura_ou_403()
     try:
-        preco = int(float(request.form.get("price", "0").replace(",", ".")) * 100)
+        preco = int(round(float(request.form.get("price", "0").replace(",", ".")) * 100))
         dias = int(request.form.get("days", "30"))
         conns = max(1, int(request.form.get("max_connections", "1")))
         e_teste = 1 if request.form.get("is_test") else 0
@@ -610,6 +567,7 @@ def vpn_teste_salvar():
         flash("A duração do teste deve ser de 1 a 24 horas.", "erro")
         return redirect(url_for("botvendas.vpn_planos"))
 
+    config_do_cliente(g.user["id"])  # garante a linha antes de gravar
     execute(
         "UPDATE bv_client_config SET test_enabled=?, test_duration_hours=?, updated_at=? "
         "WHERE user_id=?",
@@ -694,9 +652,33 @@ def _validar_acao(acao):
     a = (acao or "").strip()
     if a in ("test", "apk", "support"):
         return a
-    if a.startswith(("menu:", "msg:", "link:", "buy:")):
+    if a.startswith(("menu:", "buy:")):
         return a[:64]
     return None
+
+
+def _montar_acao(form):
+    """Monta a ação de um botão a partir do formulário (novo e editar).
+
+    Devolve (acao, erro). Link e mensagem são validados aqui, e não aceitos
+    como texto livre no campo de ação, para que nenhum caminho grave
+    'link:' ou 'msg:' sem validação.
+    """
+    tipo = (form.get("action") or "").strip()
+    if tipo == "link":
+        url = (form.get("url") or "").strip()
+        if not url.startswith(("https://", "http://")) or len(url) > 500 or " " in url:
+            return None, "Informe um link válido começando com https:// ou http://."
+        return "link:" + url, None
+    if tipo == "msg":
+        mensagem = (form.get("message") or "").strip()
+        if not mensagem:
+            return None, "Digite a mensagem que será enviada ao cliente."
+        return "msg:" + mensagem[:3500], None
+    acao = _validar_acao(tipo)
+    if not acao:
+        return None, "Escolha uma ação válida para o botão."
+    return acao, None
 
 
 def _planos_ids_ativos(user_id):
@@ -870,25 +852,12 @@ def editor_botao_novo(key):
         abort(404)
 
     texto = (request.form.get("text") or "").strip()[:64]
-    acao = (request.form.get("action") or "").strip()
-
-    if acao == "link":
-        url = (request.form.get("url") or "").strip()
-        if not url.startswith(("https://", "http://")):
-            flash("Informe um link válido começando com https:// ou http://.", "erro")
-            return redirect(url_for("botvendas.editor"))
-        acao = "link:" + url
-    elif acao == "msg":
-        mensagem = (request.form.get("message") or "").strip()
-        if not mensagem:
-            flash("Digite a mensagem que será enviada ao cliente.", "erro")
-            return redirect(url_for("botvendas.editor"))
-        acao = "msg:" + mensagem[:3500]
-    else:
-        acao = _validar_acao(acao)
-
-    if not texto or not acao:
-        flash("Informe o texto do botão e uma ação válida.", "erro")
+    acao, erro = _montar_acao(request.form)
+    if erro:
+        flash(erro, "erro")
+        return redirect(url_for("botvendas.editor"))
+    if not texto:
+        flash("Informe o texto do botão.", "erro")
         return redirect(url_for("botvendas.editor"))
 
     menu["rows"].append([{"text": texto, "action": acao}])
@@ -916,9 +885,14 @@ def editor_botao_acao(key, rid, bid):
             menu["rows"].pop(rid)
     elif op == "edit":
         texto = (request.form.get("text") or "").strip()[:64]
-        acao = _validar_acao(request.form.get("action"))
-        if texto and acao:
-            row[bid] = {"text": texto, "action": acao}
+        acao, erro = _montar_acao(request.form)
+        if erro or not texto:
+            flash(erro or "Informe o texto do botão.", "erro")
+            return redirect(url_for("botvendas.editor"))
+        row[bid] = {"text": texto, "action": acao}
+        _salvar_draft(g.user["id"], layout)
+        flash("Botão atualizado no rascunho.", "ok")
+        return redirect(url_for("botvendas.editor"))
     _salvar_draft(g.user["id"], layout)
     return redirect(url_for("botvendas.editor"))
 

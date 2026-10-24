@@ -63,7 +63,7 @@ def criar_pix(user_id, sale_id, amount_cents, description, idem=None):
         "description": description[:200],
         "payment_method_id": "pix",
         "external_reference": referencia(sale_id),
-        "payer": {"email": f"cliente{sale_id}@botvendas.telemax"},
+        "payer": {"email": f"cliente{sale_id}@botvendas.telemax.com.br"},
     }
     try:
         resp = _http("https://api.mercadopago.com/v1/payments", token, payload, idem)

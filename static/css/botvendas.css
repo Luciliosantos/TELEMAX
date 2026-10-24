@@ -1,19 +1,231 @@
-/* Módulo Bot Vendas VPN — só estilos novos, nada do site é alterado */
-.mod-card{background:linear-gradient(170deg,var(--card),#091430);border:1px solid var(--border);
-  border-radius:14px;padding:16px;margin:12px 0}
-.mod-card h3,.mod-card h4{margin:0 0 8px;color:var(--neon)}
-.mono{font-family:monospace;font-size:.8rem}
-.tgbtn{background:var(--neon-soft);border:1px solid var(--border);border-radius:8px;
-  padding:4px 10px;font-weight:700;font-size:.85rem}
-/* prévia do celular */
-.tgphone{max-width:320px;margin:14px auto;background:#0e1621;border:1px solid var(--border);
-  border-radius:18px;overflow:hidden}
+/* ==========================================================================
+   Módulo BOT VENDAS AUT-VPN — sistema visual (escopo .bv)
+   Padrão: cards com cabeçalho, grade de formulário de 2 colunas (1 no celular),
+   botões de altura fixa, badges de status e lista de etapas.
+   Nada aqui altera as páginas fora do módulo.
+   ========================================================================== */
+[hidden]{display:none!important}
+
+.bv{max-width:1100px;margin:24px auto 40px;color:var(--txt)}
+.bv *{min-width:0}
+
+/* ---- cabeçalho de página ---- */
+.bv-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px 20px;flex-wrap:wrap;
+  padding-bottom:16px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.bv-head-txt{flex:1 1 320px}
+.bv-crumb{font-size:.84rem;color:var(--muted);margin-bottom:6px}
+.bv-crumb a{color:var(--muted)}
+.bv-crumb a:hover{color:var(--neon)}
+.bv-title{margin:0;font-size:1.55rem;line-height:1.25;color:#fff;font-weight:800}
+.bv-sub{margin:6px 0 0;color:var(--muted);font-size:.93rem;max-width:720px}
+.bv-head-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* ---- botões padronizados ---- */
+.bv .btn{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:9px 16px;font-size:.9rem;line-height:1.2;border-radius:10px;white-space:nowrap;text-align:center}
+.bv .btn-sm{min-height:34px;padding:6px 12px;font-size:.84rem;border-radius:9px}
+.bv .btn-lg{min-height:46px;padding:11px 22px;font-size:.98rem}
+.bv .btn-icon{min-width:36px;padding:6px 0}
+.bv .btn-danger{color:#fff!important;border-color:#dc2626!important;background:#dc2626!important}
+.bv .btn-danger:hover{color:#fff;background:#ff4d6d33;border-color:#ff4d6d}
+.bv .btn-line{background:rgba(255,255,255,.02)}
+.bv .btn:disabled{opacity:.6;cursor:wait;transform:none;box-shadow:none}
+.bv .btn-wide{width:100%}
+.bv code{font-size:.86em;font-family:ui-monospace,monospace;background:#071028;padding:1px 5px;border-radius:5px}
+.bv-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.bv-actions.end{justify-content:flex-end}
+.bv-actions .btn-primary-slot{margin-left:auto}
+
+/* ---- cartões e seções ---- */
+.bv-card{background:linear-gradient(170deg,var(--card),#091430);border:1px solid var(--border);
+  border-radius:16px;padding:20px;margin:0 0 18px;box-shadow:0 10px 30px #0006}
+.bv-card.danger{border-color:#ff4d6d44;background:linear-gradient(170deg,#1d0f1f,#120a18)}
+.bv-card-h{display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;
+  margin:0 0 16px}
+.bv-card-h-txt{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 260px}
+.bv-card-h h3{margin:0;font-size:1.08rem;color:#fff;font-weight:700}
+.bv-card-h p{margin:3px 0 0;color:var(--muted);font-size:.87rem}
+.bv-ico{width:40px;height:40px;flex:none;border-radius:11px;display:grid;place-items:center;font-size:1.15rem;
+  background:var(--neon-soft);border:1px solid var(--border)}
+.bv-divider{height:1px;background:var(--border);margin:18px 0;border:0}
+.bv-muted{color:var(--muted);font-size:.88rem;margin:0}
+.bv-hint{color:var(--muted);font-size:.84rem;margin:8px 0 0}
+
+/* ---- navegação por áreas (painel) ---- */
+.bv-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin:0 0 18px}
+.bv-tile{display:flex;flex-direction:column;gap:10px;padding:18px;border-radius:14px;color:var(--txt);
+  background:linear-gradient(160deg,var(--card),#0a1740);border:1px solid var(--border);transition:border-color .2s,transform .12s}
+.bv-tile:hover{border-color:var(--neon);transform:translateY(-2px);text-decoration:none}
+.bv-tile-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+.bv-tile b{font-size:1rem;color:#fff}
+.bv-tile span{color:var(--muted);font-size:.86rem;line-height:1.45}
+.bv-tile .bv-tile-go{margin-top:auto;color:var(--neon);font-weight:700;font-size:.84rem}
+
+/* ---- grade de formulário ---- */
+.bv-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}
+.bv-grid .full{grid-column:1/-1}
+.bv-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 18px}
+.bv .form{margin:0}
+.bv .form label{display:block;margin:0 0 14px;font-size:.87rem;color:var(--muted);font-weight:600}
+.bv .form input:not([type=checkbox]):not([type=radio]),
+.bv .form select,.bv .form textarea{width:100%;margin-top:6px;padding:10px 12px;font-size:.93rem;
+  background:#071028;border:1px solid var(--border);border-radius:10px;color:var(--txt);outline:none;
+  font-family:inherit}
+.bv .form textarea{resize:vertical;min-height:84px;line-height:1.45}
+.bv .form input:focus,.bv .form select:focus,.bv .form textarea:focus{border-color:var(--neon);box-shadow:0 0 0 3px #00e0ff22}
+.bv .form label.check{display:flex;align-items:center;gap:8px;color:var(--txt);font-weight:600;margin:4px 0 14px}
+.bv .form label.check input{width:18px;height:18px;margin:0;accent-color:var(--neon)}
+.bv-field-help{display:block;color:var(--muted);font-weight:400;font-size:.8rem;margin-top:5px}
+.bv-w-sm{max-width:150px}
+.bv .form .bv-w-sm{display:block;width:100%;max-width:150px}
+.bv-form-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px}
+
+/* ---- badges e chaves/valores ---- */
+.bv-badge{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:700;
+  padding:4px 11px;border-radius:999px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+.bv-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.bv-badge.ok{color:var(--ok);background:#2ee6a814;border-color:#2ee6a866}
+.bv-badge.warn{color:#ffb02e;background:#ffb02e14;border-color:#ffb02e66}
+.bv-badge.err{color:#ff8fa3;background:#ff4d6d14;border-color:#ff4d6d66}
+.bv-badge.info{color:var(--neon);background:var(--neon-soft);border-color:var(--border)}
+.bv-badge.off{color:var(--muted)}
+.bv-kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.bv-kv>div{background:#0a1636;border:1px solid var(--border);border-radius:12px;padding:12px 14px;min-width:0}
+.bv-kv small{display:block;color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:4px}
+.bv-kv b{display:block;font-size:.97rem;color:#fff;word-break:break-word;font-weight:700}
+.bv-kv .big{font-size:1.45rem;color:var(--neon);text-shadow:0 0 14px #00e0ff55}
+.bv-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;word-break:break-all}
+
+/* ---- etapas do teste SSH ---- */
+.bv-steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bv-step{display:flex;gap:12px;align-items:flex-start;padding:11px 13px;border-radius:11px;
+  background:#0a1636;border:1px solid var(--border);font-size:.9rem}
+.bv-step .ic{width:24px;height:24px;flex:none;border-radius:50%;display:grid;place-items:center;
+  font-weight:800;font-size:.8rem;background:var(--neon-soft);color:var(--neon)}
+.bv-step.ok{border-color:#2ee6a844}
+.bv-step.ok .ic{background:#2ee6a822;color:var(--ok)}
+.bv-step.err{border-color:#ff4d6d55;background:#1f0b15}
+.bv-step.err .ic{background:#ff4d6d22;color:#ff8fa3}
+.bv-step-body{min-width:0;flex:1}
+.bv-step-body b{display:block;color:#fff;font-size:.92rem}
+.bv-step-body span{color:var(--muted);font-size:.85rem;word-break:break-word}
+
+/* ---- mensagens (flash) dentro do módulo ---- */
+body:has(.bv) .flashes{max-width:1100px;margin:16px auto 0}
+body:has(.bv) .flash{display:flex;gap:10px;align-items:flex-start;border-radius:11px;padding:9px 13px;margin:5px 0;font-size:.9rem;line-height:1.4}
+body:has(.bv) .flash.ok::before{content:"✓";font-weight:900;flex:none}
+body:has(.bv) .flash.erro::before{content:"!";font-weight:900;flex:none}
+
+/* ---- carregamento ---- */
+.bv .btn.is-loading{position:relative;color:transparent!important;pointer-events:none}
+.bv .btn.is-loading::after{content:"";position:absolute;width:16px;height:16px;border-radius:50%;
+  border:2px solid #ffffff55;border-top-color:#fff;animation:bvspin .7s linear infinite}
+@keyframes bvspin{to{transform:rotate(360deg)}}
+
+/* ---- tabelas (desktop) e cartões (celular) ---- */
+.bv .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:#0a1636}
+.bv .tbl{width:100%;border-collapse:collapse;margin:0;font-size:.9rem}
+.bv .tbl th{color:var(--muted);text-align:left;font-weight:700;font-size:.8rem;text-transform:uppercase;
+  letter-spacing:.4px;padding:12px 14px;border-bottom:1px solid var(--border);background:#071028;white-space:nowrap}
+.bv .tbl td{padding:12px 14px;border-bottom:1px solid #0f2148;vertical-align:middle}
+.bv .tbl tr:last-child td{border-bottom:0}
+.bv .tbl .acoes-cel{white-space:nowrap}
+.bv .tbl .mono{font-family:ui-monospace,monospace;font-size:.82rem;word-break:break-all}
+
+/* ---- lista de botões do Telegram (editor) ---- */
+.bv-menu-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.bv-menu-h h3{margin:0;font-size:1.08rem;color:#fff}
+.bv-btnlist{display:grid;gap:10px;margin:14px 0}
+.bv-btnrow{border:1px solid var(--border);border-radius:13px;background:#0a1636;padding:12px}
+.bv-btnrow-main{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.bv-btnrow-info{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 260px}
+.bv-btnrow-acoes{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.bv-tg{display:inline-block;background:#1c2b3a;color:#e8f1ff;border-radius:8px;padding:7px 12px;
+  font-weight:700;font-size:.86rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bv-tipo{font-size:.8rem;color:var(--muted);word-break:break-word}
+.bv-tipo b{color:var(--txt);font-weight:600}
+.bv-edit{margin-top:12px;border-top:1px dashed var(--border);padding-top:12px}
+.bv-edit>summary{cursor:pointer;color:var(--neon);font-weight:700;font-size:.88rem;list-style:none}
+.bv-edit>summary::-webkit-details-marker{display:none}
+.bv-addbox{border:1px dashed #00c8ff66;border-radius:14px;padding:16px;margin-top:6px;background:#060f26}
+.bv-addbox h4{margin:0 0 12px;font-size:.98rem;color:#fff}
+.bv-empty{color:var(--muted);text-align:center;border:1px dashed var(--border);border-radius:12px;padding:18px;margin:12px 0;font-size:.9rem}
+
+/* ---- planos (cartões) ---- */
+.bv-plans{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.bv-plan{display:flex;flex-direction:column;gap:12px;border:1px solid var(--border);border-radius:15px;
+  padding:18px;background:linear-gradient(170deg,var(--card),#091430)}
+.bv-plan.off{opacity:.62}
+.bv-plan-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.bv-plan-top h3{margin:0;font-size:1.02rem;color:#fff;word-break:break-word}
+.bv-plan-price{font-size:1.5rem;font-weight:800;color:var(--neon);text-shadow:0 0 14px #00e0ff44}
+.bv-plan-meta{color:var(--muted);font-size:.86rem;display:flex;gap:6px 14px;flex-wrap:wrap}
+.bv-plan-note{font-size:.8rem;color:var(--muted);margin:0;border-left:2px solid var(--border);padding-left:9px}
+.bv-plan-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+
+/* ---- prévia do celular (mantida) ---- */
+.tgphone{max-width:320px;margin:14px auto;background:#0e1621;border:1px solid var(--border);border-radius:18px;overflow:hidden}
 .tghead{background:#17212b;color:#fff;padding:10px 14px;font-weight:700;font-size:.9rem}
-.tgmsg{background:#2b5278;color:#fff;margin:12px;padding:10px 12px;border-radius:12px;
-  font-size:.9rem;white-space:pre-wrap}
+.tgmsg{background:#2b5278;color:#fff;margin:12px;padding:10px 12px;border-radius:12px;font-size:.9rem;white-space:pre-wrap}
 .tgkb{padding:0 12px 14px}
 .tgrow{display:flex;gap:6px;justify-content:center;margin:6px 0}
-.tgk{flex:1;text-align:center;background:#1c2b3a;color:var(--txt);border-radius:8px;
-  padding:8px 6px;font-size:.8rem;font-weight:600}
+.tgk{flex:1;text-align:center;background:#1c2b3a;color:var(--txt);border-radius:8px;padding:8px 6px;font-size:.8rem;font-weight:600}
 .tgkadm{background:#3a2b1c;color:#ffd7a0}
 .tgkoff{opacity:.5}
+.tgbtn{background:var(--neon-soft);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-weight:700;font-size:.85rem}
+.mono{font-family:monospace;font-size:.8rem}
+
+/* ==========================================================================
+   Responsivo: sem rolagem horizontal, tabelas viram cartões no celular
+   ========================================================================== */
+@media (max-width:820px){
+  .bv-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  .bv{margin-top:14px}
+  .bv-title{font-size:1.3rem}
+  .bv-grid,.bv-grid-3{grid-template-columns:1fr}
+  .bv-card{padding:16px;border-radius:14px}
+  .bv-head-actions{width:100%}
+  .bv-head-actions .btn{flex:1 1 auto}
+  .bv-actions{flex-direction:column-reverse;align-items:stretch}
+  .bv-actions .btn,.bv-actions form{width:100%}
+  .bv-actions form .btn{width:100%}
+  .bv-actions.end{align-items:stretch}
+  .bv-actions .btn-primary-slot{margin-left:0}
+  .bv-btnrow-main{flex-direction:column;align-items:stretch}
+  .bv-btnrow-acoes{justify-content:flex-start}
+  .bv-w-sm{max-width:none}
+  .bv .tbl-wrap{border:0;background:none;overflow:visible}
+  .bv .tbl thead{display:none}
+  .bv .tbl,.bv .tbl tbody{display:block;width:100%}
+  .bv .tbl tr{display:block;border:1px solid var(--border);border-radius:13px;background:#0a1636;padding:6px 12px;margin:0 0 10px}
+  .bv .tbl td{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:7px 0;text-align:right;word-break:break-word}
+  .bv .tbl td::before{content:attr(data-label);color:var(--muted);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.4px;text-align:left;flex:none}
+  .bv .tbl td.acoes-cel{justify-content:flex-end}
+  .bv .tbl td.acoes-cel::before{display:none}
+  .bv-plans{grid-template-columns:1fr}
+  .bv-tiles{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion: reduce){
+  .bv .btn.is-loading::after{animation:none}
+  .bv-tile{transition:none}
+}
+
+/* ajustes: formulários dentro de barras de ação */
+.bv-head-actions form,.bv-actions form{margin:0}
+@media (max-width:640px){
+  .bv-head-actions form{flex:1 1 auto;display:flex}
+  .bv-head-actions form .btn{width:100%}
+  .bv-actions form{display:flex}
+  .bv-actions form .btn{width:100%}
+}
+
+/* Somente os dois botoes de acoes avancadas da aba Servidor VPS */
+.bv details.bv-card.danger button.btn-danger[name="acao"][value="revogar_fp"],
+.bv details.bv-card.danger button.btn-danger[name="acao"][value="revogar_chave"] {
+  background-color: #dc2626 !important;
+  background-image: none !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+}
