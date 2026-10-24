@@ -117,3 +117,30 @@ Detalhes e evidências: `docs/RELATORIO-TESTES.md`.
 4. **Revisão jurídica** dos textos de Termos/Privacidade (são modelos técnicos).
 5. Teste financeiro real (cobrança Pix com dinheiro verdadeiro) só é possível com a conta
    do gateway ativa; a suíte cobre toda a lógica de ativação/expiração com webhook assinado.
+
+## Instalacao em uma VPS nova
+
+Requisitos: VPS Ubuntu/Debian limpa, acesso root, dominio com DNS apontado para o IP da VPS e acesso ao GitHub.
+
+Execute como root, substituindo `telemax.exemplo.com` pelo seu dominio:
+
+```bash
+export TELEMAX_DOMAIN=telemax.exemplo.com
+curl -fsSL https://raw.githubusercontent.com/Luciliosantos/TELEMAX/main/install.sh -o /tmp/telemax-install.sh && bash /tmp/telemax-install.sh
+```
+
+O instalador recusa continuar se detectar uma instalacao existente. Use uma VPS nova.
+
+### HTTPS
+
+Depois da instalacao, confirme que o DNS A/AAAA aponta para a VPS e que as portas 80 e 443 estao liberadas. Configure o certificado:
+
+```bash
+apt-get update
+apt-get install -y certbot python3-certbot-nginx
+certbot --nginx -d telemax.exemplo.com
+```
+
+Substitua o dominio pelo dominio real. Confira o acesso HTTPS e o webhook Pix antes de colocar o sistema em producao.
+
+Nunca publique o arquivo `.env`, tokens, senhas ou o banco de dados.
